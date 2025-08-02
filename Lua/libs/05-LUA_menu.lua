@@ -1,0 +1,264 @@
+/*	HEADER
+	Master table for Takis Menu
+	
+*/
+
+rawset(_G, "TAKIS_MENU",{})
+local tm = TAKIS_MENU
+
+local TV_OnOff = {[0] = "Off",[1] = "On"}
+
+tm.entries = {
+	[0] = {
+		title = "Takis Help",
+		color = "p.skincolor",
+		text = {
+			"Menu Help",
+			"Takis Manual",
+			"Takis Tutorial",
+			'Important Letter',
+		},
+		commands = {
+			"showmenuhints",
+			"instructions",
+			"takistutorial",
+			"importantletter",
+		},
+		hints = {
+			"Show the controls.",
+			"Print the manual URL in console.",
+			"Warp to the Tutorial level. Singleplayer only.",
+			"Get important lore for your journey's purpose."
+		}
+	},
+	--hardcoded so you cant mess with it
+	[1] = {
+		title = "Achievements",
+		color = SKINCOLOR_CARBON,
+		text = {''},
+	},
+	[2] = {
+		title = "Takis Options",
+		color = SKINCOLOR_FOREST,
+		text = {
+			"No Strafe",
+			"No PT Happy Hour",
+			"More Happy Hour",
+			"Taunt Menu Cursor",
+			"Quakes",
+			"Flashes",
+			"Clutch Meter Location",
+			"Share Combos",
+			"Don't Show Ach. Messages",
+			"MinHud",
+			"Laggy Model",
+			"Autosaving",
+		},
+		patches = {
+			[1] = {on = "TA_POOPSHIT"},
+		},
+		table = "takis.io",
+		values = {
+			"nostrafe",
+			"nohappyhour",
+			"morehappyhour",
+			"tmcursorstyle",
+			"quakes",
+			"flashes",
+			"clutchstyle",
+			"sharecombos",
+			"dontshowach",
+			"minhud",
+			"laggymodel",
+			"autosave",
+		},
+		textvalues = {
+			TV_OnOff,TV_OnOff,TV_OnOff,
+			{[1] = "Numbers 1-7",[2] = "Weapon Next/Prev"},
+			TV_OnOff,TV_OnOff,
+			{[0] = "Lives area",[1] = "Near Takis"},
+		},
+		commands = {
+			"nostrafe",
+			"nohappyhour",
+			"morehappyhour",
+			"tauntmenucursor",
+			"quakes",
+			"flashes",
+			"clutchstyle",
+			"sharecombos",
+			"dontshowach",
+			"minhud",
+			"laggymodel",
+			"letautosave",
+		},
+		hints = {
+			"Toggles forced strafing.",
+			"Toggles Happy Hour in Pizza Time Spice Runners.",
+			"Toggles other characters getting Happy Hour in PTSR.",
+			"Toggles the cursor in the Taunt Menu. (TF+C1)",
+			"Toggles screen quakes.",
+			"Toggles screen flashes and flashing objects.",
+			"Clutch Bar or Clutch Meter.",
+			"Share combos with other Takis.",
+			"Don't show other Takis' achievements.",
+			"Toggles Minimal HUD elements for Takis.",
+			"Toggles Afterimage color shifting for models.",
+			"Toggles Autosaving every minute and when exiting levels.",
+		}
+	},
+	[3] = {
+		title = "Driver's License",
+		color = SKINCOLOR_GOLD,
+		text = {''},
+		commands = {
+			"changemugshot"
+		}
+	},
+	[4] = {
+		title = "I/O Stuff",
+		color = SKINCOLOR_GREY,
+		text = {
+			"Save Config",
+			"Create Backup",
+			"Load Config",
+			"Delete Achievements",
+			"$$$$$",
+			"$$$$$$",
+		},
+		commands = {
+			"saveconfig",
+			"saveconfig true",
+			"loadconfig",
+			"deleteachievements",
+		},
+		hints = {
+			nil,nil,nil,nil,
+			"If your config is outdated, it simply means it is not\n"..
+			"up to date with your current settings."
+		}
+	},
+	[5] = {
+		title = "Net Stuff",
+		color = SKINCOLOR_GOLD,
+		text = {
+			"Nerf Armas",
+			"Tauntkills",
+			"No achievements",
+			"Ragdoll collaterals",
+			"Heartcards",
+			"Hammer quakes",
+			"Toggle Happy Hour",
+			"No effects",
+		},
+		values = {
+			"nerfarma",
+			"tauntkillsenabled",
+			"noachs",
+			"collaterals",
+			"cards",
+			"hammerquakes",
+			CV_TAKIS.happytime.value == 1,
+			"noeffects",
+		},
+		--must be consvar_t, must be on/off, yes/no, true/false
+		cvars = {
+			CV_TAKIS.nerfarma,
+			CV_TAKIS.tauntkills,
+			CV_TAKIS.achs,
+			CV_TAKIS.collaterals,
+			CV_TAKIS.heartcards,
+			CV_TAKIS.hammerquake,
+			CV_TAKIS.happytime,
+			CV_TAKIS.noeffects,
+		},
+		hints = {
+			"Toggles Powerful Arma & normal Arma for Takis.",
+			"Toggles tauntkills for Takis.",
+			"Toggles Takis being able to get achievements.",
+			"Toggles ragdolls being able to kill other things.",
+			"Toggles things dropping Heart Cards on death.",
+			"Toggles Takis' Hammer Blast causing quakes when landing.",
+			"Toggles Singleplayer Happy Hour.\nRestart map for changes to take place.",
+			"Toggles Takis' more taxxing effects.",
+		}
+	},
+}
+
+--Epic.
+--hacky solution to get this thing in, since it isnt a _NET var anymore
+addHook("ThinkFrame",do
+	tm.entries[5].values[7] = CV_TAKIS.happytime.value == 1
+end)
+
+if (TAKIS_ISDEBUG)
+	tm.entries[6] = {
+		title = "Debug",
+		color = SKINCOLOR_SEAFOAM,
+		noprefix = true,
+		text = {
+			"Instant exit",
+			"Panic!",
+			"Shotgunify",
+			"Test Map 1",
+			"Test Map 2",
+			"\x82".."Debug Flags:",
+		},
+		table = "_G",
+		values = {
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil
+		},
+		commands = {
+			"leave",
+			"panic 3 2",
+			"shotgun",
+			"testmap 1",
+			"testmap 2",
+			nil,
+		},
+		hints = {
+			"Leave the level instantly.",
+			"Triggers Happy Hour with 3 minutes.",
+			"Instant shotgunify.",
+			"Warp to Test Room.",
+			"Warp to Kart Test Room.",
+			"Clientside debug flags.",
+		}
+	}
+	local numtxt = #tm.entries[6].text
+	local dbgflags = {
+		"BUTTONS",
+		"STATE",
+		"ACH",
+		"QUAKE",
+		"HAPPYHOUR",
+		"ALIGNER",
+		"PFLAGS",
+		"BLOCKMAP",
+		"SPEEDOMETER",
+		"HURTMSG",
+		"BOSSCARD",
+		"NET",
+		"MUSIC",
+	}
+	for k,v in ipairs(dbgflags)
+		tm.entries[6].text[numtxt+k] = v
+	end
+	for k,v in ipairs(dbgflags)
+		tm.entries[6].commands[numtxt+k] = "setdebug "..v
+	end
+	addHook("ThinkFrame",do
+		for i = 1,#dbgflags
+			local bit = 1<<(i-1)
+			tm.entries[6].values[numtxt+i] = (TAKIS_DEBUGFLAG&bit)==bit
+		end
+	end)
+	
+end
+
+TAKIS_FILESLOADED = $+1

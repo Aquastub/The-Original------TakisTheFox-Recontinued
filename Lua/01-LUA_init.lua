@@ -1,0 +1,3207 @@
+/*	HEADER
+	Freeslot everything and define constants here
+	
+*/
+
+--Funny init
+
+--welcome to sonic robo blast 2.
+--after 40 years in development, hopefully it will be worth the wait.
+--thanks, and have fun.
+
+--specki is not takis, and takis is not specki!!
+
+/*
+	SPECIAL THANKS/CONTRIBUTORS
+	-dashdahog - takis' sprites inspiration. I LOVE TAILEELS!!!
+	-Jisk - jelped jith jome jode
+	-Unmatched Bracket - waterslide pain -> sliding code, compiling code, rakis over fang
+	-katsy - bounce sector detection
+	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
+	-Marilyn - final demo cutscene i used lol, bump code
+	-saxashitter - helped me with some code in sharecombos, hook profiling
+	-Huushba - drivers license mugshot
+	
+	CODE I STOLE (from reusable mods)
+	-SMSReborn - IO code
+	-CustomHud Lib - customhud lib duhhh
+	-Clone Fighter's Textbox Engine - slightly modified to be more
+									  banjo kazooie (also linedef
+									  triggers)
+	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in takis
+	-ChrispyChars - some code used for confetti, safefreeslot code, world2hud code, sounds
+	-MinHUD - some hud functions i used
+	-ffoxD's Momentum mod - momentum used in takis
+	-Checker Wrecker (SRB2K)- offroad collision for kart
+	-Team New - shield ability code
+	-Squash and Stretch in 2.2.9 - jumping squash and stretch
+	
+	SOME MORE STUFF I STOLE (lmao)
+	-Antonblast - sound effects, music, sprites
+	-Pizza Tower - sound effects
+	-Team Fortress 2 - sound effects, music
+	-Kart Krew - SRB2K & DRRR source code used (public + gpl license)
+	-Hill Climb Racing - kart low fuel beep
+	-Sonic Mania - kart tire screech sound
+	
+	some functions were also taken from here
+	https://wiki.srb2.org/wiki/User:Clairebun/Sandbox/Common_Lua_Functions
+	
+	shhhhooould be all, if i missed any LET ME KNOW SO I CAN CREDIT THEM!!!
+*/
+
+local constlist = {}
+
+local pnk = "\x8E"
+local wht = "\x80"
+
+rawset(_G, "TR", TICRATE)
+table.insert(constlist,{"TR",TICRATE})
+
+rawset(_G, "TAKIS_FREEZEDBG", 0)
+
+rawset(_G, "TAKIS_DEBUGFLAG", 0)
+local dbgflags = {
+	"BUTTONS",
+	"STATE",
+	"ACH",
+	"QUAKE",
+	"HAPPYHOUR",
+	"ALIGNER",
+	"PFLAGS",
+	"BLOCKMAP",
+	"SPEEDOMETER",
+	"HURTMSG",
+	"BOSSCARD",
+	"NET",
+	"MUSIC",
+	"KART",
+	"CONFIG",
+	"NOHUD",
+	"NOPTSRHH",
+}
+for k,v in ipairs(dbgflags)
+	local val = 1<<(k-1)
+	assert(val ~= -1,"\x85Ran out of bits for DEBUG_! (k="..k..")\x80")
+	rawset(_G,"DEBUG_"..v,val)
+	print("Enummed DEBUG_"..v.." ("..val..")")
+	table.insert(constlist,{"DEBUG_"..v,val})
+end
+
+--these arent really used so theres no point in verifying these
+local ioflags = {
+	"ACH",
+	"CONFIG",
+	
+	"SAVE",
+	"LOAD",
+	
+	"MENU",
+}
+for k,v in ipairs(ioflags)
+	rawset(_G,"IO_"..v,1<<(k-1))
+	print("Enummed IO_"..v.." ("..1<<(k-1)..")")
+end
+
+//only for IO debug, despite the name implying its for all
+rawset(_G, "DEBUG_print",function(p,enum)
+	--log this
+	/*
+	table.insert(TAKIS_NET.iousage,{
+		player = p,
+		type = tonumber(enum) or 0,
+		tics = TR,
+	})
+	*/
+end)
+
+rawset(_G, "TAKIS_SKIN", "takisthefox")
+table.insert(constlist,{"TAKIS_SKIN","takisthefox"})
+
+rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
+
+rawset(_G, "TAKIS_MAX_HEARTCARD_FUSE", 30*TR)
+table.insert(constlist,{"TAKIS_MAX_HEARTCARD_FUSE",30*TR})
+
+rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
+table.insert(constlist,{"TAKIS_HEARTCARDS_SHAKETIME",17})
+
+rawset(_G, "TAKIS_MAX_COMBOTIME", 7*TR)
+table.insert(constlist,{"TAKIS_MAX_COMBOTIME",7*TR})
+
+rawset(_G, "TAKIS_MAX_TRANSFOTIME", 20*TR)
+table.insert(constlist,{"TAKIS_MAX_TRANSFOTIME",20*TR})
+
+rawset(_G, "TAKIS_PART_COMBOTIME", 4*TR/5)
+table.insert(constlist,{"TAKIS_PART_COMBOTIME",4*TR/5})
+
+--Extra second for both tweening in and shrinking
+rawset(_G, "TAKIS_TOOLTIP_TIME", 4*TR + (TR))
+table.insert(constlist,{"TAKIS_TOOLTIP_TIME", 4*TR + (TR)})
+
+--MF_NOCLIPTHING because interp lololo
+rawset(_G, "TAKIS_3D_FLAGS", MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOCLIP|MF_SCENERY)
+table.insert(constlist,{"TAKIS_3D_FLAGS", MF_NOGRAVITY|MF_NOCLIPTHING|MF_NOCLIP|MF_SCENERY})
+
+--just soap lol!
+rawset(_G, "TAKIS_COMBO_RANKS", {
+	"Lame...",
+	"\x83Soapy",
+	"\x88".."Alright...",
+	"\x8B".."Going Places!",
+	"\x82Nice!",
+	"\x84".."Gamer!",
+	"\x8D".."Destructive!",
+	"\x87".."Demo Expert!",
+	"\x85Menacing!",
+	"\x86WICKED!!",
+	"\x85".."Adobe Flash!",
+	"\x88".."Aseprite!!",
+	"\x86Robo!",
+	"\x88".."BLAST!!",
+	"F"..pnk.."u"..wht.."n"..pnk.."n"..wht.."y"..pnk.."!",
+	"\x86Unfunny.",
+	"\x8B".."EAT EAT EAT!",
+	"\x82Holy Moly!",
+	"\x86Please, no more!",
+	"\x84".."BALLER!",
+	"\x82Super Cool!",
+	"\x87".."Combo Fodder",
+	"\x85".."DEATH MACHINE!",
+	"\x8DNow THAT'S Hardcore!!",
+	"\x86".."Boring...",
+	"\x82".."De".."\x8D".."lu".."\x85".."sio".."\x8D".."na".."\x82".."l!",
+	"\x85Property DAMAGE!!",
+	pnk.."Lovely!",
+	"\x83Lookin' Good!",
+	pnk.."Fun-\x81ky!",
+})
+rawset(_G, "TAKIS_COMBO_UP", 5)
+table.insert(constlist,{"TAKIS_COMBO_UP",5})
+
+rawset(_G, "TAKIS_HAPPYHOURFONT", "TAHRF")
+table.insert(constlist,{"TAKIS_HAPPYHOURFONT","TAHRF"})
+
+rawset(_G, "TAKIS_TITLETIME", 0)
+rawset(_G, "TAKIS_TITLEFUNNY", 0)
+rawset(_G, "TAKIS_TITLEFUNNYY", 0)
+
+--ONLY use for tutorial maps
+rawset(_G, "TAKIS_TUTORIALSTAGE", 0)
+
+--hurtmsg stuff
+local hurtmsgenum = {
+	"CLUTCH",
+	"SLIDE",
+	"HAMMERBOX",
+	"HAMMERQUAKE",
+	"ARMA",
+	"BALL",
+	"NADO",
+}
+for k,v in ipairs(hurtmsgenum)
+	local val = k-1
+	rawset(_G,"HURTMSG_"..v,val)
+	print("Enummed HURTMSG_"..v.." ("..val..")")
+	table.insert(constlist,{"HURTMSG_"..v,val})
+end
+
+local noabflags = {
+	"CLUTCH",
+	"HAMMER",
+	"DIVE",
+	"SLIDE",
+	"WAVEDASH",
+	"SHOTGUN",		--generally for anything shotgunned
+	"SHIELD",
+	"THOK",
+	"AFTERIMAGE",	--i wouldnt really call afterimages an ability
+	"MOBILETAUNT",
+	"TRANSFO",		--disallow transfos gained from damage
+}
+for k,v in ipairs(noabflags)
+	local val = 1<<(k-1)
+	rawset(_G,"NOABIL_"..v,val)
+	print("Enummed NOABIL_"..v.." ("..val..")")
+	table.insert(constlist,{"NOABIL_"..v,val})
+end
+--anything that uses spin
+rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
+table.insert(constlist,{"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH})
+
+--i dont *think* i should put thok in here, but that might change
+rawset(_G,"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE|NOABIL_MOBILETAUNT)
+table.insert(constlist,{"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE|NOABIL_MOBILETAUNT})
+
+local transfoenum = {
+	"SHOTGUN",
+	"PANCAKE",
+	"BALL",
+	"ELEC",
+	"TORNADO",
+	"FIREASS",
+	"KART",
+	"METAL",
+}
+for k,v in ipairs(transfoenum)
+	local val = 1<<(k-1)
+	rawset(_G,"TRANSFO_"..v,val)
+	print("Enummed TRANSFO_"..v.." ("..val..")")
+	table.insert(constlist,{"TRANSFO_"..v,val})
+end
+
+rawset(_G,"CR_TAKISKART",20)
+table.insert(constlist,{"CR_TAKISKART",20})
+
+rawset(_G,"SPINOUT_SPIN",		(1<<0))
+table.insert(constlist,{"SPINOUT_SPIN",		(1<<0)})
+rawset(_G,"SPINOUT_TUMBLE",		(1<<1))
+table.insert(constlist,{"SPINOUT_TUMBLE",	(1<<1)})
+rawset(_G,"SPINOUT_BIGTUMBLE",	(1<<2))
+table.insert(constlist,{"SPINOUT_BIGTUMBLE",(1<<2)})
+rawset(_G,"SPINOUT_STUMBLE",	(1<<3))
+table.insert(constlist,{"SPINOUT_STUMBLE",	(1<<3)})
+
+--spike stuff according tro source
+-- https://github.com/STJr/SRB2/blob/a4a3b5b0944720a536a94c9d471b64c822cdac61/src/p_map.c#L838
+rawset(_G, "SPIKE_LIST", {
+	[MT_SPIKE] = true,
+	[MT_WALLSPIKE] = true,
+	[MT_SPIKEBALL] = true,
+	[MT_BOMBSPHERE] = true,
+})
+
+--these arent really synched anymore but keeping the old name
+--so stuff doesnt break
+rawset(_G, "TAKIS_NET", {
+	
+	nerfarma = false,
+	tauntkillsenabled = true,
+	noachs = false,		--dont let players get achs in netgames
+	collaterals = true,	--let ragdolls kill other ragdolls
+	cards = true,		--only spawn heartcards if this is true
+	hammerquakes = true,
+	chaingun = false,
+	noeffects = false,
+	forcekart = false,
+	allowkarters = false,
+	--happytime = false,
+	
+	achtime = 0,
+	usedcheats = false,
+
+	inspecialstage = false,
+	inbossmap = false,
+	inbrakmap = false,
+	isretro = 0,
+	numdestroyables = 0,
+	partdestroy = 0,
+	maxpostcount = 0,
+	metalsonics = {},
+	ideyadrones = {},
+	dronepos = {0,0,0},
+	scoreboard = {},
+
+	allowfallout = true,
+	allowbosscards = true,
+	
+})
+
+--everything else that was in TAKIS_NET is now in here
+rawset(_G,"TAKIS_MISC",{
+
+	exitingcount = 0,
+	playercount = 0,
+	takiscount = 0,
+	livescount = 0,
+	
+	inttic = 0,
+	stagefailed = true,
+	cardbump = 0,
+	lastbump = 0,
+	
+	--DONT change to happy hour if the song is any one of these
+	specsongs = {
+		--srb2
+		["_1up"] = true,
+		["_shoes"] = true,
+		["_minv"] = true,
+		["_inv"] = true,
+		["_drown"] = true,
+		["_inter"] = true,
+		["_clear"] = true,
+		["_gover"] = true,
+		["creds"] = true,
+		
+		--takis
+		["_abclr"] = true,
+		["hpyhre"] = true,
+		["hapyhr"] = true,
+		["letter"] = true,
+		["_conga"] = true,
+		["_metlc"] = true,
+		["blstcl"] = true,
+		["brdwrd"] = true,
+		["war"] = true,
+		
+		--spice runners
+		["rnk_d"] = true,
+		["rnk_cb"] = true,
+		["rnk_a"] = true,
+		["rnk_s"] = true,
+		["rnk_p"] = true,
+		["p_int"] = true,
+		["ovrtme"] = true,
+		["ovrtm2"] = true,
+		["otmusa"] = true,
+		["otmusb"] = true,
+		["ot_ph"] = true,
+		["othard"] = true,
+		
+		--misc
+		["_timbl"] = true,
+	},
+	
+	inescapable = {
+		--vanilla
+		["techno hill zone 1"] = true,
+		["techno hill zone 2"] = true,
+		["deep sea zone 1"] = true,
+		["deep sea zone 2"] = true,
+		["castle eggman zone 1"] = true,
+		["castle eggman zone 2"] = true,
+		["red volcano zone 1"] = true,
+		["egg rock zone 1"] = true,
+		["black core zone 1"] = true,
+		["pipe towers zone"] = true,
+		["haunted heights zone"] = true,
+		-- do you REALLY wanna back track these 2?
+		["aerial garden zone"] = true,
+		["azure temple zone"] = true,
+		
+		--oldc shit
+		["hub"] = true,
+		["hell coaster zone 1"] = true,
+		--this stage kinda already has an escape sequence
+		--of its own
+		["festung oder so"] = true,
+		["spiral hill pizza"] = true,
+		["magma mountain 1"] = true,
+		["hanging illusion"] = true,
+		["hexacolor heaven"] = true,
+		["null space"] = true,
+		
+		--tortured planet
+		--stage locks you out of any backtracking routes
+		["eruption conduit 2"] = true,
+		["snowcap nimbus 1"] = true,
+		["snowcap nimbus 2"] = true,
+		
+		--the past
+		["srb2 museum zone"] = true,
+	},
+	--this is pretty badass
+	forcenohhmusic = {
+		["egg satellite zone"] = true,
+	},
+	forcenohhendmusic = {
+		["egg satellite zone"] = true,
+	},
+	forcenofallout = {
+		--all bossmaps dont allow fall out
+		["arid canyon zone 3"] = true,
+		["black core zone 1"] = true,
+		["black core zone 2"] = true,
+		["black core zone 3"] = true,
+		["aerial garden"] = true,	--lmao
+	},
+})
+
+rawset(_G,"TAKIS_BOSSCARDS",{
+	--titlecard stuff
+	bossnames = {
+		-- Vanilla SRB2
+		[MT_EGGMOBILE] = "Egg Zapper",
+		[MT_EGGMOBILE2] = "Egg Slimer",
+		[MT_EGGMOBILE3] = "Sea Egg",
+		--this is the longest a name can be on a green res
+		[MT_EGGMOBILE4] = "E. Colosseum",
+		[MT_FANG] = "Fang",
+		[MT_METALSONIC_BATTLE] = "Metal Sonic",
+		[MT_CYBRAKDEMON] = "Brak Eggman",
+		[MT_BLACKEGGMAN] = "Brak Eggman",
+	},
+	addonbosses = {
+		--mrce
+		MT_FBOSS = "Egg Fighter",
+		MT_FBOSS2 = "Egg Fighter",
+		MT_XBOSS2 = "Egg Mobile",
+		MT_EGGANIMUS = "Egg Animus",
+		MT_EGGANIMUS_EX = "Egg Animus",
+		MT_EGGBALLER = "Fireballer",
+		MT_EGGFREEZER = "Egg Freezer",
+		MT_EGGEBOMBER = "E-Bomber",
+		
+		--characters
+		MT_SONIC = "Sonic",
+		MT_TAILS = "Tails",
+		MT_KNUCKLES = "Knuckles",
+		MT_AMY = "Amy Rose",
+		MT_SHADOW = "Shadow",
+		MT_SILVER = "Silver",
+		
+		-- Misc levels
+		/*
+		MT_EGGMOBILE7 = "Egg Boiler",
+		MT_BOSSRIDE = "Player", -- this one never gets used, included anyway to tell the game you have it loaded
+		
+		--true arena stuff
+		MT_GREENHILLBOSS = "Ball & Chain",
+		MT_EGGOFLAMER = "Egg Flambe",
+		MT_EGGOFLAMERB = "Beta Flambe",
+		MT_STRAYBOLTS_BOSS = "Stray-Bolts",
+		MT_THOKBOSS = "Thok",
+		MT_SANDSUB_326 = "Sand Sub",
+		MT_OLDK = "Ugly Knux",
+		MT_FROSTBURN = "Frostburn",
+		MT_EGGZAP = "Egg Zap",
+		MT_REKNUCKLES = "Knuckles",
+		MT_SUPERHOOD = "Robo-Hood",
+		MT_ANASTASIA = "Anastasia",
+		MT_INFINITE_318 = "Infinite",
+		*/
+		
+		--specki
+		MT_AGGROMANEN = "Aggromobile",
+		MT_AGGROPAINTER = "Aggropainter",
+	},
+	
+	nobosscards = {},
+	noaddonbosscards = {
+		MT_FACCIOLO_BOSS = true,
+		
+		MT_GREENHILLBOSS = true,
+		MT_EGGOFLAMER = true,
+		MT_EGGOFLAMERB = true,
+		MT_STRAYBOLTS_BOSS = true,
+		MT_THOKBOSS = true,
+		MT_SANDSUB_326 = true,
+		MT_OLDK = true,
+		MT_FROSTBURN = true,
+		MT_EGGZAP = true,
+		MT_REKNUCKLES = true,
+		MT_ROBOHOOD_MINIBOSS = true,
+		MT_SUPERHOOD = true,
+		MT_ANASTASIA = true,
+		MT_INFINITE_318 = true,
+		
+		MT_PIZZA_ENEMY = true,
+		MT_ALIVEDUSTDEVIL = true,
+		MT_PT_JUGGERNAUTCROWN = true,
+	},
+	
+	bossprefix = {
+		[MT_EGGMOBILE] = "EGG",
+		[MT_EGGMOBILE2] = "EGG",
+		[MT_EGGMOBILE3] = "EGG",
+		[MT_EGGMOBILE4] = "EGG",
+		[MT_FANG] = "FNG",
+		[MT_METALSONIC_BATTLE] = "MSN",
+		[MT_CYBRAKDEMON] = "BRK",
+		[MT_BLACKEGGMAN] = "BRK",
+	},
+	addonbossprefix = {
+		--mrce
+		MT_FBOSS = "EGG",
+		MT_FBOSS2 = "EGG",
+		MT_XBOSS2 = "EGG",
+		MT_EGGANIMUS = "EGG",
+		MT_EGGANIMUS_EX = "EGG",
+		MT_EGGBALLER = "EGG",
+		MT_EGGFREEZER = "EGG",
+		MT_EGGEBOMBER = "EGG",
+		MT_SANDSUB_326 = "EGG",
+		MT_GREENHILLBOSS = "EGG",
+		MT_EGGMOBILE7 = "EGG",
+		
+		--true arena
+		/*
+		MT_GREENHILLBOSS = "EGG",
+		MT_EGGOFLAMER = "EGG",
+		MT_EGGOFLAMERB = "EGG",
+		MT_SANDSUB_326 = "EGG",
+		MT_FROSTBURN = "EGG",
+		MT_EGGZAP = "EGG",
+		*/
+	},
+})
+
+rawset(_G,"TAKIS_MUGSHOTS",{
+	[1] = {
+		credit = '',
+		patch = "TA_LICENSEP0",
+	},
+	[2] = {
+		credit = '',
+		patch = "TA_LICENSEP1",
+	},
+	[3] = {
+		credit = '',
+		patch = "TA_LICENSEP2",
+	},
+	[4] = {
+		credit = '@huushba',
+		patch = "TA_LICENSEP3",
+	},
+	[5] = {
+		credit = '',
+		patch = "TA_LICENSEP4",
+	},
+})
+
+rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
+table.insert(constlist,{"TAKIS_HAMMERDISP",FixedMul(52*FU,9*FU/10)})
+
+rawset(_G, "TakisInitTable", function(p)
+	--why print?
+	CONS_Printf(p,"\x86"+"Initializing Takis' table...")
+
+	p.takistable = {
+		--buttons
+		jump = 0,
+		use = 0,
+		tossflag = 0,
+		c1 = 0,
+		c2 = 0,
+		c3 = 0,
+		fire = 0,
+		firenormal = 0,
+		weaponmask = 0,
+		weaponmasktime = 0,
+		weaponnext = 0,
+		weaponprev = 0,
+		
+		jump_R = 0,
+		use_R = 0,
+		tossflag_R = 0,
+		c1_R = 0,
+		c2_R = 0,
+		c3_R = 0,
+		fire_R = 0,
+		firenormal_R = 0,
+		weaponnext_R = 0,
+		weaponprev_R = 0,
+		
+		transfo = 0,
+		
+		--vars
+		accspeed = 0,
+		prevspeed = 0,
+		clutchcombo = 0,
+		clutchcombotime = 0,
+		clutchtime = 0,
+		clutchingtime = 0,
+		clutchspamcount = 0,
+		clutchspamtime = 0,
+		afterimaging = 0,
+		beingcrushed = false,
+		slidetime = 0,
+		YDcount = 0,
+		jumptime = 0,
+		wavedashcapable = false,
+		dived = false,
+		steppedthisframe = false,
+		dontlanddust = false,
+		dontfootdust = false,
+		ticsforpain = 0,
+		ticsinpain = 0,
+		timesdeathpitted = 0,
+		saveddmgt = 0,
+		yeahwait = 0, 
+		yeahed = false,
+		altdisfx = 0,
+		setmusic = false,
+		crushtime = 0,
+		timescrushed = 0,
+		wentfast = 0,
+		sweat = 0,
+		body = 0,
+		stoprolling = false,
+		--the only "InX" variable thats all lowercase 
+		--(and not with the bools)
+		inwaterslide = false,
+		wasinwaterslide = false,
+		glowyeffects = 0,
+		sethappyend = false,
+		otherskin = false,
+		otherskintime = 0,
+		rmomz = 0,
+		prevz = 0,
+		lastrank = 1,
+		lastmomz = 0,
+		lastlives = p.lives,
+		oldlives = p.lives,
+		recovwait = 0,
+		dropdashstale = 0,
+		dropdashstaletime = 0,
+		lastmap = 1,
+		lastgt = 0,
+		lastskincolor = 0,
+		lastdestroyed = 0,
+		lastemeralds = 0,
+		lastss = 0,
+		lastpos = {
+			x = p.realmo.x,
+			y = p.realmo.y,
+			z = p.realmo.z,
+			momx = p.realmo.momx,
+			momy = p.realmo.momy,
+			momz = p.realmo.momz,
+			prethink = {
+				x = p.realmo.x,
+				y = p.realmo.y,
+				z = p.realmo.z,
+				momx = p.realmo.momx,
+				momy = p.realmo.momy,
+				momz = p.realmo.momz,
+			},
+		},
+		lastrings = 0,
+		lastangle = p.cmd.angleturn << 16,
+		lastaiming = p.cmd.aiming,
+		lastexiting = 0,
+		--would make more sense to have these 2 in the io table
+		achfile = 0,
+		--if non-zero, wait until TAKIS_NET.achtime is 0
+		--before giving out each ACHIEVEMENT_* bit
+		achbits = 0,
+		drilleffect = 0,
+		issuperman = false,
+		attracttarg = nil,
+		afterimagecolor = 1,
+		dustspawnwait = 0,
+		timetouchingground = 0,
+		resettingtoslide = false,
+		--NIGHT SEX PLODE!?!?!?
+		nightsexplode = false,
+		bashtime = 0,
+		bashtics = 0,
+		bashcooldown = false,
+		pizzastate = 0,
+		deathfloored = false,
+		pancaketime = 0,
+		electime = 0,
+		hhexiting = false,
+		crushscale = FU/3,
+		prevz = 0,
+		ballretain = 0,
+		balldrift = 0,
+		timeshit = 0,
+		totalshit = 0,
+		spiritlist = {},
+		fireasssmoke = 0,
+		fireasstime = 0,
+		fireasscolor = SKINCOLOR_GREEN,
+		fireballtime = 0,
+		starman = false,
+		coyote = 5,
+		trophy = 0,
+		gotemeralds = 0,
+		emeraldcutscene = 0,
+		firethokked = false, --fireass 3rd jump
+		lastminhud = nil,
+		placement = 0,
+		lastplacement = 0,
+		lastgroundedpos = {},
+		lastgroundedangle = 0,
+		ropeletgo = 0,
+		--pit animation ticker
+		pitanim = 0,
+		pitfunny = false,
+		--times youve fell in a pit
+		pitcount = 0,
+		--tics down while grounded
+		pittime = 0,
+		pitbackup = {p.realmo.x,p.realmo.y,p.realmo.z,p.realmo.angle},
+		lastcarry = 0,
+		afterimagecount = 0,
+		painoverlay = 0,
+		deathfunny = false,
+		lastlaps = 0,
+		laptime = 0,
+		skidangle = 0,
+		skidforcetime = 0,
+		nfreeroamarrow = nil,
+		deadtimer = 0,
+		freezedeath = false,
+		lastweapon = 0,
+		currentweapon = 0,
+		weapondelaytics = 0,
+		slopeairtime = false,
+		metaltime = 0,
+		justbumped = 0,
+		forcerakis = false,
+		jumpfatigue = false,
+		stairjank = 0,
+		steppeddown = 0,
+		bashspin = 0,
+		waittics = 0,
+		waitframe = A,
+		laststate = S_PLAY_STND,
+		lastrealscore = 0,
+		screaming = 0,
+		clutchfirefx = 0,
+		frictionfreeze = 0,
+		lastafterimaging = false,
+		skidframe = -1,	--A for regular, B for hammer
+		
+		kart = {
+			ringspaid = 0,
+			mobj = nil,
+			paidforkart = false,
+			sidemove = 0,
+			forwardmove = 0,
+		},
+		
+		--tilting
+		tiltroll = 0,
+		tiltdo = false,
+		tiltvalue = 0,
+		tiltfreeze = false,
+		tiltangle = 0,
+		tiltrolladd = 0,	--lmao
+		
+		spritexscale = FU,
+		spriteyscale = FU,
+		
+		nadocount = 0,
+		nadotic = 0,
+		nadouse = 0,
+		nadoang = 0,
+		nadocrash = 0,
+		nadotime = 0,
+		nadotuttic = 0,
+		
+		taunttime = 0,
+		tauntid = 0,
+		tauntspecial = false,
+		--join mobj
+		tauntjoin = 0,
+		tauntjointime = 0,
+		tauntjoinable = false,
+		--quick taunts activated by
+		--tossflag+c2/c3
+		--uses taunt ids
+		--these are actually io but they arent in the io table :trol:
+		tauntquick1 = 0,
+		tauntquick2 = 0,
+		--holds the player doing a partner taunt with us
+		tauntpartner = 0,
+		--dont put the other player in tauntpartner if this is false
+		tauntacceptspartners = false,
+		tauntreject = false,
+		tauntextra = {},
+		tauntcancel = false,
+		
+		hammerblastdown = 0,
+		hammerblastwentdown = false,
+		hammerblastjumped = 0,
+		hammerblastgroundtime = 0,
+		hammerblastangle = 0,
+		
+		bombdive = {
+			started = false,
+			tics = 0,
+		},
+		
+		gravflip = 1,
+		
+		heartcards = TAKIS_MAX_HEARTCARDS,
+		eatencards = 0,
+		
+		combo = {
+			count = 0,
+			lastcount = 0,
+			time = 0,
+			rank = 1,
+			verylevel = 0,
+			score = 0,
+			cashable = false,
+			dropped = false,
+			awardable = false,
+			pacifist = true,
+			--get hit and this goes up!
+			--subtracts score with the same formula
+			penalty = 0,
+			
+			failcount = 0,
+			failtics = 0,
+			failrank = 0,
+			
+			--anim stuff
+			introtics = 0,
+			outrotics = 0,
+			outrotointro = 0,
+			frozen = false,
+			slidein = 0,
+			slidetime = 0,
+		},
+		io = {
+			hasfile = false,
+			loaded = false,
+			loadwait = 25,
+			loadtries = 0,
+			loadedach = false,
+			/*
+				0 - idle
+				1 - starting to save
+				2 - save complete
+				3 - couldnt save
+				4 - loaded w/ errors
+			*/
+			savestate = 0,
+			savestatetime = 0,
+			
+			nostrafe = 0,
+			nohappyhour = 0,
+			morehappyhour = 0,
+			tmcursorstyle = 1, --taunt menu cursor style, 1 for nums, 2 for cursor
+			quakes = 1,
+			flashes = 1,
+			additiveai = 1,
+			clutchstyle = 1, --0 for bar, 1 for meter
+			sharecombos = 1,
+			dontshowach = 0, --1 to not show ach messages
+			minhud = 0, --guess what this one does, you wont believe it
+			laggymodel = 1,	--dont colorshift if laggy model
+			autosave = 1,
+		},
+		license = {
+			haslicense = false,
+			licenseaward = 0,
+			mugtime = 0,
+			
+			ranover = 0,
+			miles = 0,
+			crashes = 0,
+			bumps = 0,
+			mugshot = 1,
+		},
+		
+		--tf2 taunt menu lol
+		--up to 7 taunts, detected with BT_WEAPONMASK
+		tauntmenu = {
+			open = false,
+			closingtime = 0,
+			yadd = 500*FU,
+			tictime = 0,
+			list = {
+				--this is stupid, maybe i can use tables
+				--and draw each line seperately
+				[1] = {"Ouchy","Ouch!"},
+				[2] = "Smugness",
+				[3] = "Conga",
+				[4] = {"Home-run","Bat"},
+				[5] = {"Bird","Word!"},
+				[6] = "Yeah!",
+				[7] = "Death",
+			},
+			--1-7 x pos
+			cursor = 1,
+			gfx = {
+				--the associated taunt icon for each taunt
+				--MUST BE HUD PATCHES!!
+				pix = {
+					[1] = "TAUNTPIX_PAIN",	
+					[2] = "TAUNTPIX_SMUG",	
+					[3] = "TAUNTPIX_CONG",	
+					[4] = "TAUNTPIX_HRBT",	
+					[5] = "TAUNTPIX_BIRD",	
+					[6] = "TAUNTPIX_YEAH",	
+					[7] = "TAUNTPIX_DEAD",	
+				},
+				--fixed point scales
+				scales = {
+					[1] = FU/2,
+					[2] = FU/2,
+					[3] = FU/2,
+					[4] = FU/2,
+					[5] = FU/2,
+					[6] = FU/2,
+					[7] = FU/2,
+				},
+			},
+			--text x offsets
+			/*
+			xoffsets = {
+				[1] = 11,
+				[4] = 12,
+				[5] = 9,
+			},
+			*/
+		},
+		cosmenu = {
+			menuinaction = false,
+			
+			--cursor pos
+			y = 0,
+			page = 0,
+			scroll = 0,
+			
+			--btn
+			up = 0,
+			down = 0,
+			left = 0,
+			right = 0,
+			jump = 0,
+			
+			achcur = 0,
+			achpage = 0,
+			
+			--player num to watch
+			linnode = #p,
+			
+			hintfade = 3*TR+18,
+		},
+		hurtmsg = {
+			[HURTMSG_CLUTCH] = {text 		= "Clutch Boost",		tics = 0},
+			[HURTMSG_SLIDE] = {text 		= "Slide",				tics = 0},
+			[HURTMSG_HAMMERBOX] = {text 	= "Hammer",				tics = 0},
+			[HURTMSG_HAMMERQUAKE] = {text 	= "Earthquake",			tics = 0},
+			[HURTMSG_ARMA] = {text 			= "Armageddon Shield",	tics = 0},
+			[HURTMSG_BALL] = {text			= "tumble",				tics = 0},
+			[HURTMSG_NADO] = {text 			= "Tornado Spin",		tics = 0},
+		},
+		--[[
+		bonuses = {
+			["shotgun"] = {
+				tics = 0, 
+				score = 0,
+				text = "Shotgun"
+			},
+			["ultimatecombo"] = {
+				tics = 0, 
+				score = 0,
+				text = "\x82Ultimate Combo\x80"
+			},
+			["happyhour"] = {
+				tics = 0, 
+				score = 0,
+				text = "\x85Happy Hour trigger\x80"
+			},
+			cards = {},
+			/*
+			["heartcard"] = {
+				tics = 0, 
+				score = 0,
+				text = pnk.."Heart Card"
+			}
+			*/
+		},
+		]]--
+		--LITERALLY just hitlag 2 LMAO
+		freeze = {
+			tics = 0,
+			momentum = {0,0,0},
+			sprites = {S_PLAY_STND,SPR2_STND,A},
+			angle = 0,
+			set = false
+		},
+		/*
+		hitlag = {
+			tics = 0,
+			speed = 0,
+			momz = 0,
+			angle = 0,
+			frame = 0,
+			sprite2 = 0,
+			pflags = 0,
+		},
+		*/
+		
+		shotgunned = false,
+		--the shotgun mobj
+		shotgun = 0,
+		shotguncooldown = 0,
+		shotguntime = 0,
+		timesincelastshot = 0,
+		shotguntuttic = 0,
+		shotgunforceon = false,
+		shotgunshots = 0,	--counts up every shot
+		shotgunshotdown = false,
+		
+		--bools
+		--booleans
+		onGround = false,
+		inPain = false,
+		isTakis = false,
+		isSinglePlayer = false,
+		inWater = false,
+		inGoop = false,
+		inFakePain = false,
+		notCarried = false,
+		onPosZ = false,
+		isElevated = false,
+		inNIGHTSMode = false,
+		justHitFloor = false,
+		inSRBZ = false,
+		inChaos = false,
+		isSuper = false,
+		isAngry = false,
+		inBattle = false,
+		in2D = false,
+		inSaxaMM = false,
+		
+		--fake powers
+		fakeflashing = 0,
+		stasistic = 0,
+		thokked = false,
+		fakesprung = false,
+		fakeexiting = 0,
+		nocontrol = 0,
+		noability = 0,
+		
+		--quakes
+		quakeint = 0, 
+		quake = {
+			/*
+			intensity = FU,
+			tics = TR,
+			min = FU/TR
+			*/
+		},
+		
+		--hud
+		HUD = {
+			timeshit = 0,
+			timeshake = 0,
+			showingletter = false,
+			hudname = '',
+			cfgnotifstuff = 0,
+			useplacements = false,
+			
+			tooltips = {
+				["minecart"] = {
+					tics = 0,
+					button = "C1",
+					flags = V_HUDTRANS,
+					dispreturn = -20*FU,
+					text = "Break Minecart",
+					prolong = false,
+				},
+				["shield"] = {
+					tics = 0,
+					button = "C2",
+					flags = V_HUDTRANS,
+					dispreturn = -20*FU,
+					text = "Shield Ability",
+					prolong = false,
+				},
+				["deshotgun"] = {
+					tics = 0,
+					button = "C3",
+					flags = V_HUDTRANS,
+					dispreturn = -20*FU,
+					text = "De-Shotgun (Hold)",
+					prolong = false,
+					holdthresh = TR/2,
+				},
+				["canceltaunt"] = {
+					tics = 0,
+					button = "c1",
+					button2 = "tf",
+					button2_am = 2,
+					flags = V_HUDTRANS,
+					dispreturn = -20*FU,
+					text = "Cancel Taunt",
+					prolong = false,
+				},
+			},
+			--so minhud!
+			countdown = {
+				scale = 0,
+				scale2 = 0,
+				sound = sfx_none,
+				number = 0,
+				tics = 0,
+				lock = false,
+			},
+			lapanim = {
+				lapnum = 0,
+				tics = 0,
+				time = 0,
+				maxlaps = -1,
+			},
+			--record attack happy hour stuff
+			rthh = {
+				time = 0,
+				tics = 0,
+				sptic = 0,
+			},
+			lives = {
+				tweenx = -55*FU,
+				tweentic = 5*TR,
+				tweenwait = TR*3/2,
+				bump = 0,
+				nokarthud = false,
+			},
+			menutext = {
+				tics = 0,
+			},
+			steam = {
+				/*
+				tics = 0,
+				xadd = 0,
+				enum = 0,
+				*/
+			},
+			showingachs = 0,
+			statusface = {
+				--Unused
+				/*
+				priority = 0,
+				state = "IDLE",
+				frame = 0,
+				*/
+				evilgrintic = 0,
+				happyfacetic = 0,
+				painfacetic = 0,
+			},
+			heartcards = {
+				shake = 0,
+				add = 0,
+				
+				--spinning anim
+				spintics = 0,
+				oldhp = 0,
+				hpdiff = 0,
+			},
+			rings = {
+				FIXED = {19*FU, 56*FU},
+				int = {117, 43},
+				spin = 0,
+				shake = 0,
+				sprite = "RING",
+				type = MT_RING,
+				ringframe = 1,
+				drawrings = 0,
+			},
+			--timer has 2 different sets for spectator and when finished
+			--you can tell this was way before i knew how to align
+			--hud stuff....
+			timer = {
+				text = 14,
+				int = {117, 60},		
+				spectator = {90-(13*6)+75+15 +15,(62-6)+20+24},
+				finished = {90-(13*6)+75+15 +15,(62-6)+20},
+			},
+			combo = {
+				basex = 15*FU,
+				x = 15*FU,
+				basey = 70*FU,
+				y = 70*FU,
+				momx = 0,
+				momy = 0,
+				scale = FU,
+				shake = 0,
+				patchx = 0,
+				tokengrow = 0,
+				fillnum = TAKIS_MAX_COMBOTIME*FU,
+				penaltyshake = 0,
+			},
+			flyingscore = {
+				num = 0,
+				tics = 0,
+				x = 0,
+				y = 0,
+				lastscore = 0,
+				scorenum = p.score,
+				xshake = 0,
+				yshake = 0,
+				
+				scorex = 0,
+				scorey = 0,
+				scorea = 0,
+				scores = 0,
+			},
+			funny = {
+				y = 500*FU,
+				alsofunny = false,
+				wega = false,
+				tics = 0,
+			},
+			ptsr = {
+				xoffset = 30,
+				yoffset = 100,
+			},
+			happyhour = {
+				falldown = false,
+				doingit = false,
+				its = {
+					scale = FU/20,
+					expectedtime = TR,
+					x = 60*FU,
+					yadd = -200*FU,
+					patch = "TAHY_ITS",
+					frame = 0,
+					momx = 0,
+					momy = 0,
+				},
+				happy = {
+					scale = FU/20,
+					expectedtime = 3*TR/2,
+					x = 155*FU,
+					yadd = 100*FU, 
+					patch = "TAHY_HAPY",
+					frame = 0,
+					momx = 0,
+					momy = 0,
+				},
+				hour = {
+					scale = FU/20,
+					expectedtime = 2*TR,
+					x = 260*FU,
+					yadd = 100*FU, 
+					patch = "TAHY_HOUR",
+					frame = 0,
+					momx = 0,
+					momy = 0,
+				},
+				face = {
+					x = 155*FU,
+					expectedtime = TR,
+					yadd = -200*FU,
+					frame = 0,
+					momx = 0,
+					momy = 0,
+					
+				}
+			},
+			rank = {
+				grow = 0,
+				percent = 0, --we use this for the fills
+				score = 0, --same here
+			},
+			bosscards = {
+				maxcards = 0,
+				nocards = false,
+				cards = 0,
+				cardshake = 0,
+				mo = 0,
+				name = '',
+				timealive = 0,
+				statusface = {
+					priority = 0,
+					state = "IDLE",
+					frame = 0,
+				},
+			},
+			bosstitle = {
+				tic = 0,
+				mom = 0,
+				takis = {
+					100,60
+				},
+				egg = {
+					200,140
+				},
+				--x only
+				vs = {
+					160-19,
+					160,
+				},
+				
+				basetakis = {
+					100,60
+				},
+				baseegg = {
+					200,140
+				},
+				--x only
+				basevs = {
+					160-19,
+					160,
+				}
+			},
+			comboshare = {
+				--indexing every player node
+				/*
+				[0] = serfver
+				[4] = pnode 4
+				and whatnot
+				*/
+				/*
+				{
+					comboadd = 0,
+					tics = 0,
+					x = 0,
+					y = 0,
+					node = i
+				}
+				*/
+			},
+			viewmodel = {
+				bob = 0,
+				bobx = 0,
+				boby = 0,
+				frameinc = 0,
+			},
+			
+				/*
+			scoretext = {
+				cmap = V_GREENMAP,
+				trans = V_HUDTRANSHALF,
+				text = "+5",
+				ymin = -FU,
+				tics = TR,
+			}
+				*/
+			
+		},
+		
+	}
+
+	--now we can tell if this actually worked or not
+	CONS_Printf(p, "\n"+"\x82"+"Initialized Takis' stuff!")
+	CONS_Printf(p, "Check out the enclosed instruction book!")
+	CONS_Printf(p, "	https://tinyurl.com/mr45rtzz")
+
+	CONS_Printf(p, "\n \x83Made by luigi budd")
+	takis_printwarning(p)
+	takis_printdebuginfo(p)
+	
+	if P_RandomChance(FU/2)
+		CONS_Printf(p, "\n"+"\x82"+"Look for the Gummy Bear album in stores on November 13th. ")
+	end
+	return true
+end)
+
+SafeFreeslot("sfx_clutch")
+sfxinfo[sfx_clutch].caption = "Clutch Boost"
+SafeFreeslot("sfx_cltch2")
+sfxinfo[sfx_cltch2].caption = sfxinfo[sfx_clutch].caption
+SafeFreeslot("sfx_cltch3")
+sfxinfo[sfx_cltch3].caption = sfxinfo[sfx_clutch].caption
+sfxinfo[sfx_cltch3].flags = SF_X2AWAYSOUND
+SafeFreeslot("sfx_cltch4")
+sfxinfo[sfx_cltch4].caption = sfxinfo[sfx_clutch].caption
+
+SafeFreeslot("sfx_taksld")
+sfxinfo[sfx_taksld].caption = "Slide"
+
+--takis vox
+SafeFreeslot("sfx_eeugh")
+sfxinfo[sfx_eeugh].caption = '\x8F"Ehh!"\x80'
+SafeFreeslot("sfx_antow1")
+sfxinfo[sfx_antow1].caption = '\x8F"Aah!!"\x80'
+SafeFreeslot("sfx_antow2")
+sfxinfo[sfx_antow2].caption = '\x8F"Eargh!"\x80'
+SafeFreeslot("sfx_antow3")
+sfxinfo[sfx_antow3].caption = '\x8F"Grr!"\x80'
+SafeFreeslot("sfx_antow4")
+sfxinfo[sfx_antow4].caption = '\x8F"Hey, hey!"\x80'
+SafeFreeslot("sfx_antow5")
+sfxinfo[sfx_antow5].caption = '\x8F"Oh boy!"\x80'
+SafeFreeslot("sfx_antow6")
+sfxinfo[sfx_antow6].caption = '\x8F"WOW! Eheh!"\x80'
+SafeFreeslot("sfx_antow7")
+sfxinfo[sfx_antow7].caption = '\x8F"W-w-w-w I\'m good!"\x80'
+SafeFreeslot("sfx_antwi1")
+sfxinfo[sfx_antwi1].caption = "Strange laughing"
+SafeFreeslot("sfx_antwi2")
+sfxinfo[sfx_antwi2].caption = '\x8F"Ha!"\x80'
+SafeFreeslot("sfx_antwi3")
+sfxinfo[sfx_antwi3].caption = '\x8F"Ha-ha ha ha!"\x80'
+SafeFreeslot("sfx_tayeah")
+sfxinfo[sfx_tayeah].caption = '\x8F"Yyyeahh!"\x80'
+SafeFreeslot("sfx_hapyhr")
+sfxinfo[sfx_hapyhr].caption = '\x8F'.."IT'S HAPPY HOUR!!"..'\x80'
+SafeFreeslot("sfx_taksc1")
+sfxinfo[sfx_taksc1].caption = '\x8F"Aah!!"\x80'
+SafeFreeslot("sfx_taksc2")
+sfxinfo[sfx_taksc2].caption = '\x8F"Aah!!"\x80'
+--
+
+SafeFreeslot("sfx_takdiv")
+sfxinfo[sfx_takdiv].caption = 'Dive'
+SafeFreeslot("sfx_airham")
+sfxinfo[sfx_airham].caption = 'Swing'
+SafeFreeslot("sfx_tawhip")
+sfxinfo[sfx_tawhip].caption = '\x82Johnny Test!\x80'
+SafeFreeslot("sfx_takhel")
+sfxinfo[sfx_takhel].caption = '\x8EHealed!\x80'
+SafeFreeslot("sfx_takhl2")
+sfxinfo[sfx_takhl2].caption = '/'
+SafeFreeslot("sfx_smack")
+sfxinfo[sfx_smack].caption = "\x8DSmacked!\x80"
+sfxinfo[sfx_smack].flags = SF_X2AWAYSOUND
+SafeFreeslot("sfx_takoww")
+sfxinfo[sfx_takoww] = {
+	flags = SF_X4AWAYSOUND,
+	caption = "\x85".."EUROOOOWWWW!!!\x80"
+}
+SafeFreeslot("sfx_takdjm")
+sfxinfo[sfx_takdjm].caption = "Double jump"
+SafeFreeslot("sfx_takst1")
+sfxinfo[sfx_takst1].caption = "Step"
+SafeFreeslot("sfx_takst2")
+sfxinfo[sfx_takst2].caption = "Step"
+SafeFreeslot("sfx_takst3")
+sfxinfo[sfx_takst3].caption = "Step"
+SafeFreeslot("sfx_takst4")
+sfxinfo[sfx_takst4].caption = "Land"
+SafeFreeslot("sfx_takst0")
+sfxinfo[sfx_takst0].caption = "Step"
+SafeFreeslot("sfx_takst5")
+sfxinfo[sfx_takst5].caption = "/"
+SafeFreeslot("sfx_takst6")
+sfxinfo[sfx_takst6].caption = "Clang"
+SafeFreeslot("sfx_takst7")
+sfxinfo[sfx_takst7].caption = "Step"
+
+SafeFreeslot("sfx_tkapow")
+sfxinfo[sfx_tkapow] = {
+	singular = true,
+	flags = SF_X2AWAYSOUND,
+	caption = "\x82KaPOW!!!\x80"
+}
+SafeFreeslot("sfx_tacrit")
+sfxinfo[sfx_tacrit] = {
+	flags = SF_X2AWAYSOUND,
+	caption = "\x82".."Crit!".."\x80"
+}
+SafeFreeslot("sfx_slam")
+sfxinfo[sfx_slam].caption = "\x8DSlam!!\x80"
+SafeFreeslot("sfx_jumpsc")
+sfxinfo[sfx_jumpsc].caption = "\x85".."AAAAAHHHHH!!!!\x80"
+SafeFreeslot("sfx_wega")
+sfxinfo[sfx_wega].caption = "\x85".."AAAAAHHHHH!!!!\x80"
+SafeFreeslot("sfx_mclang")
+sfxinfo[sfx_mclang] = {
+	caption = "\x8DMysterious clanging\x80",
+	flags = SF_X2AWAYSOUND|SF_TOTALLYSINGLE,
+}
+/*
+SafeFreeslot("sfx_rakupc")
+sfxinfo[sfx_rakupc].caption = "/"
+SafeFreeslot("sfx_rakupb")
+sfxinfo[sfx_rakupb].caption = "/"
+SafeFreeslot("sfx_rakupa")
+sfxinfo[sfx_rakupa].caption = "/"
+SafeFreeslot("sfx_rakups")
+sfxinfo[sfx_rakups].caption = "/"
+SafeFreeslot("sfx_rakupp")
+sfxinfo[sfx_rakupp].caption = "/"
+
+SafeFreeslot("sfx_rakdns")
+sfxinfo[sfx_rakdns].caption = "/"
+SafeFreeslot("sfx_rakdna")
+sfxinfo[sfx_rakdna].caption = "/"
+SafeFreeslot("sfx_rakdnb")
+sfxinfo[sfx_rakdnb].caption = "/"
+SafeFreeslot("sfx_rakdnc")
+sfxinfo[sfx_rakdnc].caption = "/"
+SafeFreeslot("sfx_rakdnd")
+sfxinfo[sfx_rakdnd].caption = "/"
+*/
+SafeFreeslot("sfx_homrun")
+sfxinfo[sfx_homrun] = {
+	caption = "\x82HOMERUN!!!\x80",
+	flags = SF_X4AWAYSOUND|SF_TOTALLYSINGLE,
+}
+
+SafeFreeslot("sfx_shgnl")
+sfxinfo[sfx_shgnl].caption = "\x86Time to kick ass!\x80"
+SafeFreeslot("sfx_shgns")
+sfxinfo[sfx_shgns].caption = "\x85".."BLAMMO!!\x80"
+--shotgun kill/detransfo
+SafeFreeslot("sfx_shgnk")
+sfxinfo[sfx_shgnk].caption = "Detransfo"
+SafeFreeslot("sfx_tsplat")
+sfxinfo[sfx_tsplat].caption = "\x82Splat!\x80"
+SafeFreeslot("sfx_achern")
+sfxinfo[sfx_achern] = {
+	singular = true,
+	caption = "/"
+}
+SafeFreeslot("sfx_ptchkp")
+sfxinfo[sfx_ptchkp] = {
+	flags = SF_X2AWAYSOUND,
+	caption = "\x82".."Combo Restored!\x80"
+}
+SafeFreeslot("sfx_sprcom")
+sfxinfo[sfx_sprcom] = {
+	flags = SF_X2AWAYSOUND,
+	caption = "\x83".."Combo Regenerated\x80"
+}
+SafeFreeslot("sfx_sprcar")
+sfxinfo[sfx_sprcar] = {
+	flags = SF_X2AWAYSOUND,
+	caption = "\x83".."Cards Regenerated\x80"
+}
+SafeFreeslot("sfx_didbad")
+sfxinfo[sfx_didbad].caption = "/"
+SafeFreeslot("sfx_didgod")
+sfxinfo[sfx_didgod].caption = "/"
+SafeFreeslot("sfx_fastfl")
+sfxinfo[sfx_fastfl].caption = "/"
+for i = 0, 9
+	SafeFreeslot("sfx_tcmup"..i)
+	sfxinfo[sfx_tcmup0 + i].caption = "\x83".."Combo up!\x80"
+end
+SafeFreeslot("sfx_tcmupa")
+SafeFreeslot("sfx_tcmupb")
+SafeFreeslot("sfx_tcmupc")
+sfxinfo[sfx_tcmupa].caption = "\x83".."Combo up!\x80"
+sfxinfo[sfx_tcmupb].caption = "\x83".."Combo up!\x80"
+sfxinfo[sfx_tcmupc].caption = "\x83".."Combo up!\x80"
+
+SafeFreeslot("sfx_shgnbs")
+sfxinfo[sfx_shgnbs].caption = "Shoulder Bash"
+SafeFreeslot("sfx_hrtcdt")
+sfxinfo[sfx_hrtcdt] = {
+	caption = "Tink",
+	flags = SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
+}
+SafeFreeslot("sfx_taklfh")
+sfxinfo[sfx_taklfh].caption = "Land"
+SafeFreeslot("sfx_takceh")
+sfxinfo[sfx_takceh].caption = "/"
+SafeFreeslot("sfx_takcat")
+sfxinfo[sfx_takcat] = {
+	caption = "Flying off",
+	flags = SF_X2AWAYSOUND,
+}
+
+--tb = textbox
+--open
+SafeFreeslot("sfx_tb_opn")
+sfxinfo[sfx_tb_opn].caption = "/"
+--close
+SafeFreeslot("sfx_tb_cls")
+sfxinfo[sfx_tb_cls].caption = "/"
+--tween in
+SafeFreeslot("sfx_tb_tin")
+sfxinfo[sfx_tb_tin].caption = "/"
+--tween out
+SafeFreeslot("sfx_tb_tot")
+sfxinfo[sfx_tb_tot].caption = "/"
+SafeFreeslot("sfx_s_tak1")
+sfxinfo[sfx_s_tak1].caption = "/"
+SafeFreeslot("sfx_s_tak2")
+sfxinfo[sfx_s_tak2].caption = "/"
+SafeFreeslot("sfx_s_tak3")
+sfxinfo[sfx_s_tak3].caption = "/"
+
+SafeFreeslot("sfx_trnsfo")
+sfxinfo[sfx_trnsfo].caption = "Transfo"
+SafeFreeslot("sfx_tknado")
+sfxinfo[sfx_tknado].caption = "Tornado spin"
+SafeFreeslot("sfx_tkfndo")
+sfxinfo[sfx_tkfndo].caption = "Tornado spin!"
+SafeFreeslot("sfx_takhmb")
+sfxinfo[sfx_takhmb].caption = "/"
+SafeFreeslot("sfx_sptclt")
+sfxinfo[sfx_sptclt].caption = "Got it!"
+SafeFreeslot("sfx_sdmkil")
+sfxinfo[sfx_sdmkil].caption = "/"
+SafeFreeslot("sfx_summit")
+sfxinfo[sfx_summit].caption = "\x89SUMMIT!\x80"
+SafeFreeslot("sfx_ponglr")
+sfxinfo[sfx_ponglr].caption = "/"
+SafeFreeslot("sfx_kartst")
+sfxinfo[sfx_kartst].caption = "Startup"
+sfxinfo[sfx_kartst].flags = SF_NOMULTIPLESOUND
+SafeFreeslot("sfx_kartlf")
+sfxinfo[sfx_kartlf].caption = "Fuel low!"
+SafeFreeslot("sfx_kartdr")
+sfxinfo[sfx_kartdr].caption = "/"
+for i = 0,(9 - 1)
+	local text = i
+	/*
+	if i < 10
+		text = "0"..i
+	end
+	*/
+	SafeFreeslot("sfx_karte"..text)
+	sfxinfo[sfx_karte0+i].caption = "/"
+end
+SafeFreeslot("sfx_kartsc")
+sfxinfo[sfx_kartsc].caption = "/"
+SafeFreeslot("sfx_takmcn")
+sfxinfo[sfx_takmcn].caption = "Clang"
+
+/*
+for i = 1,16
+	local text = i
+	if i < 10
+		text = "0"..i
+	end
+	SafeFreeslot("sfx_pass"..text)
+	sfxinfo[sfx_pass01+(i-1)].caption = "/"
+end
+*/
+SafeFreeslot("sfx_takskd")
+sfxinfo[sfx_takskd].caption = "Skid"
+for i = 1,3
+	SafeFreeslot("sfx_takbn"..i)
+	sfxinfo[sfx_takbn1+(i-1)].caption = "Bounce"
+end
+SafeFreeslot("sfx_takcbk")
+sfxinfo[sfx_takcbk].caption = "Break"
+SafeFreeslot("sfx_takpop")
+sfxinfo[sfx_takpop].caption = "Balloon pop"
+SafeFreeslot("sfx_s268")
+SafeFreeslot("sfx_takmtd")
+sfxinfo[sfx_takmtd].caption = "Metallic tink"
+SafeFreeslot("sfx_megadi")
+sfxinfo[sfx_megadi].caption = "Dying"
+sfxinfo[sfx_megadi].flags = SF_X2AWAYSOUND
+sfxinfo[sfx_buzz3].flags = SF_X2AWAYSOUND
+
+/*
+SafeFreeslot("sfx_nunna")
+sfxinfo[sfx_nunna].caption = "this is fucking nunna"
+*/
+SafeFreeslot("sfx_wtsig2")
+sfxinfo[sfx_wtsig2].caption = "Umm,, what the sigma?"
+sfxinfo[sfx_kc57].flags = SF_X4AWAYSOUND|SF_X8AWAYSOUND|SF_X2AWAYSOUND
+
+--spr_ freeslot
+
+SafeFreeslot("SPR_TMIS")	--misc. takis sprites
+SafeFreeslot("SPR_SWET")
+SafeFreeslot("SPR_STB1")
+SafeFreeslot("SPR_STB2")
+SafeFreeslot("SPR_STB3")
+SafeFreeslot("SPR_STB4")
+SafeFreeslot("SPR_STB5")
+SafeFreeslot("SPR_TPTN")
+--these are my own sprites so i am allowed to use them
+SafeFreeslot("SPR_SHGN")
+SafeFreeslot("SPR_CDST")
+--i guess i can use this for the  hud now
+SafeFreeslot("SPR_HTCD")
+SafeFreeslot("SPR_CMBB")
+SafeFreeslot("SPR_TNDE")
+SafeFreeslot("SPR_RGDA") --ragdoll A
+SafeFreeslot("SPR_THND")
+SafeFreeslot("SPR_TVSG")
+SafeFreeslot("SPR_TGIB")
+SafeFreeslot("SPR_TSPR")
+SafeFreeslot("SPR_TKFT")
+SafeFreeslot("SPR_MTLD")
+SafeFreeslot("SPR_MDST")
+SafeFreeslot("SPR_PGLR") --polar and other pongler sprites
+SafeFreeslot("SPR_TKRT")
+SafeFreeslot("SPR_TKEX")
+SafeFreeslot("SPR_TKIM") --impact
+SafeFreeslot("SPR_TDRI") --driftsparks
+
+--
+
+--spr2 freeslot
+
+SafeFreeslot("SPR2_SMUG")
+--SafeFreeslot("SPR2_TAK2") I LOVE WASTING FREESLOTS!!!!
+SafeFreeslot("SPR2_TDED")
+SafeFreeslot("SPR2_THUP")
+spr2defaults[SPR2_THUP] = SPR2_STND
+SafeFreeslot("SPR2_TDD2")
+spr2defaults[SPR2_TDD2] = SPR2_TDED
+SafeFreeslot("SPR2_SLID")
+--happy hour face
+SafeFreeslot("SPR2_HHF_")
+SafeFreeslot("SPR2_SGBS")
+SafeFreeslot("SPR2_SGST")
+SafeFreeslot("SPR2_CLKB")
+--PLACEHOLH
+SafeFreeslot("SPR2_PLHD")
+--fireass
+SafeFreeslot("SPR2_FASS")
+SafeFreeslot("SPR2_NADO")
+SafeFreeslot("SPR2_TBRD")
+SafeFreeslot("SPR2_KART")
+SafeFreeslot("SPR2_TDD3")
+spr2defaults[SPR2_TDD3] = SPR2_TDD2
+SafeFreeslot("SPR2_AHH_") --lol
+
+--
+
+--state freeslot
+
+SafeFreeslot("S_PLAY_TAKIS_KART")
+states[S_PLAY_TAKIS_KART] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_KART,
+    tics = -1,
+}
+
+SafeFreeslot("S_PLAY_TAKIS_TORNADO")
+states[S_PLAY_TAKIS_TORNADO] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_NADO,
+    tics = -1,
+}
+
+SafeFreeslot("S_PLAY_TAKIS_RESETSTATE")
+states[S_PLAY_TAKIS_RESETSTATE] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_WALK,
+	action = function(mo)
+		if not P_IsObjectOnGround(mo)
+			if mo.momz*P_MobjFlip(mo) < 0
+				mo.state = S_PLAY_FALL
+			else
+				mo.state = S_PLAY_JUMP
+			end
+		else
+			mo.state = S_PLAY_STND --WALK
+		end
+		if mo.player.skidtime
+			mo.state = S_PLAY_SKID
+		end
+		TakisResetState(mo.player)
+	end,
+    tics = 0,
+}
+
+SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH")
+states[S_PLAY_TAKIS_SHOULDERBASH] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_PLHD, --SPR2_SGBS,
+    tics = TR,
+    nextstate = S_PLAY_TAKIS_RESETSTATE
+}
+SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH_JUMP")
+states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_PLHD, --SPR2_SGBS,
+    tics = 4,
+    nextstate = S_PLAY_TAKIS_SHOULDERBASH
+}
+
+SafeFreeslot("S_PLAY_TAKIS_SHOTGUNSTOMP")
+states[S_PLAY_TAKIS_SHOTGUNSTOMP] = {
+    sprite = SPR_PLAY,
+    frame = A|FF_ANIMATE|SPR2_SGST,
+    tics = -1,
+    nextstate = S_PLAY_STND
+}
+SafeFreeslot("S_PLAY_TAKIS_KILLBASH")
+states[S_PLAY_TAKIS_KILLBASH] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_PLHD, --SPR2_CLKB,
+    tics = 12,
+    nextstate = S_PLAY_FALL
+}
+
+
+SafeFreeslot("S_PLAY_TAKIS_SMUGASSGRIN")
+states[S_PLAY_TAKIS_SMUGASSGRIN] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_SMUG,
+    tics = -1,
+    nextstate = S_PLAY_TAKIS_RESETSTATE
+}
+
+--TODO: use mobj.mirrored to cut down on freeslots
+SafeFreeslot("S_TAKIS_SWEAT1")
+SafeFreeslot("S_TAKIS_SWEAT2")
+/*
+SafeFreeslot("S_TAKIS_SWEAT3")
+SafeFreeslot("S_TAKIS_SWEAT4")
+*/
+states[S_TAKIS_SWEAT1] = {
+    --sprite = SPR_RING,
+	sprite = SPR_SWET,
+    frame = A|FF_ANIMATE,
+	action = function(mo)
+		mo.mirrored = not $
+	end,
+	var1 = 6,
+	var2 = 2,
+	tics = 6*2,
+    nextstate = S_TAKIS_SWEAT2
+}
+states[S_TAKIS_SWEAT2] = {
+	sprite = SPR_SWET,
+    frame = G|FF_ANIMATE,
+	var1 = 2,
+	var2 = 2,
+	tics = 2*2,
+    nextstate = S_TAKIS_SWEAT1
+}
+/*
+states[S_TAKIS_SWEAT3] = {
+	sprite = SPR_SWET,
+    frame = I|FF_ANIMATE,
+	var1 = 6,
+ 	var2 = 2,
+	tics = 6*2,
+    nextstate = S_TAKIS_SWEAT4
+}
+states[S_TAKIS_SWEAT4] = {
+	sprite = SPR_SWET,
+    frame = O|FF_ANIMATE,
+	var1 = 2,
+	var2 = 2,
+	tics = 2*2,
+    nextstate = S_TAKIS_SWEAT1
+}
+*/
+
+--jeez
+SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT1")
+SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT2")
+SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT3")
+SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT4")
+SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT5")
+
+states[S_SOAP_SUPERTAUNT_FLYINGBOLT1] = {
+	sprite = SPR_STB1,
+	frame = FF_PAPERSPRITE|FF_ANIMATE,
+	var1 = 4,
+	var2 = 2,
+	tics = 4*2
+}
+states[S_SOAP_SUPERTAUNT_FLYINGBOLT2] = {
+	sprite = SPR_STB2,
+	frame = FF_PAPERSPRITE|FF_ANIMATE,
+	tics = 4*2,
+	var1 = 4,
+	var2 = 2
+}
+states[S_SOAP_SUPERTAUNT_FLYINGBOLT3] = {
+	sprite = SPR_STB3,
+	frame = FF_PAPERSPRITE|FF_ANIMATE,
+	var1 = 4,
+	var2 = 2,
+	tics = 4*2
+}
+states[S_SOAP_SUPERTAUNT_FLYINGBOLT4] = {
+	sprite = SPR_STB4,
+	frame = FF_PAPERSPRITE|FF_ANIMATE,
+	tics = 4*2,
+	var1 = 4,
+	var2 = 2
+}
+states[S_SOAP_SUPERTAUNT_FLYINGBOLT5] = {
+	sprite = SPR_STB5,
+	frame = FF_PAPERSPRITE|FF_ANIMATE,
+	tics = 4*2,
+	var1 = 4,
+	var2 = 2
+}
+
+SafeFreeslot("S_PLAY_TAKIS_SLIDE")
+states[S_PLAY_TAKIS_SLIDE] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_SLID,
+    --var1 = 2,
+	--var2 = 2,
+	tics = -1,
+    nextstate = S_PLAY_STND
+}
+
+SafeFreeslot("S_TAKIS_TAUNT_JOIN")
+states[S_TAKIS_TAUNT_JOIN] = {
+	sprite = SPR_TPTN,
+	frame = A|FF_FULLBRIGHT,
+	tics = 6,
+	nextstate = S_NULL
+} 
+
+SafeFreeslot("S_TAKIS_TROPHY")
+--SafeFreeslot("S_TAKIS_TROPHY2")
+states[S_TAKIS_TROPHY] = {
+	sprite = SPR_TKFT,
+	frame = E|FF_FULLBRIGHT,
+	action = function(trophy)
+		if not (trophy.set)
+			trophy.flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+			trophy.fuse = 6*TR
+			trophy.timealive = 1
+			trophy.set = true
+		end
+		
+		if not (trophy and trophy.valid) then return end
+		if not (trophy.tracer and trophy.tracer.valid) and (trophy.timealive > 1) then P_RemoveMobj(trophy); return end
+		local me = trophy.tracer
+		
+		if trophy.timealive <= 3*TR
+		--wait for lua to set the tracer
+		and (trophy.tracer and trophy.tracer.valid)
+			P_MoveOrigin(trophy, me.x, me.y, GetActorZ(me,trophy,2))
+			if P_MobjFlip(me) == 1
+				trophy.eflags = $ &~MFE_VERTICALFLIP
+			else
+				trophy.eflags = $|MFE_VERTICALFLIP
+			end
+		elseif trophy.timealive > 3*TR
+			if (trophy.flags & MF_NOGRAVITY)
+				trophy.flags = $ &~MF_NOGRAVITY
+				L_ZLaunch(trophy,10*trophy.scale)
+				trophy.momx,trophy.momy = me.momx,me.momy
+				trophy.momz = $+me.momz
+			end
+			local grav = P_GetMobjGravity(trophy)
+			grav = $*3/5
+			trophy.momz = $+(grav*P_MobjFlip(trophy))
+		end
+		
+		trophy.timealive = $+1
+	end,
+	/*
+	tics = 3*TR,
+	nextstate = S_TAKIS_TROPHY2
+	*/
+	tics = 1,
+	nextstate = S_TAKIS_TROPHY
+}
+/*
+states[S_TAKIS_TROPHY2] = {
+	sprite = SPR_TKFT,
+	frame = E|FF_FULLBRIGHT,
+	tics = 3*TR,
+	nextstate = S_NULL
+}
+*/
+
+SafeFreeslot("S_PLAY_TAKIS_CONGA")
+states[S_PLAY_TAKIS_CONGA] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_STND|A,
+	tics = -1,
+    nextstate = S_PLAY_TAKIS_CONGA
+}
+
+SafeFreeslot("S_PLAY_TAKIS_BIRD")
+states[S_PLAY_TAKIS_BIRD] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_TBRD,
+	tics = -1,
+    nextstate = S_PLAY_TAKIS_BIRD
+}
+
+SafeFreeslot("S_TAKIS_SHOTGUN")
+states[S_TAKIS_SHOTGUN] = {
+	sprite = SPR_SHGN,
+	frame = A,
+	tics = -1,
+}
+
+/*
+freeslot("S_TAKIS_SHOTGUN_HITBOX")
+states[S_TAKIS_SHOTGUN_HITBOX] = {
+	sprite = SPR_RING,
+	frame = A,
+	tics = -1,
+}
+*/
+
+SafeFreeslot("S_TAKIS_CLUTCHDUST")
+states[S_TAKIS_CLUTCHDUST] = {
+	sprite = SPR_CDST,
+	frame = A|FF_PAPERSPRITE|FF_ANIMATE,
+	var1 = 6,
+	var2 = 2,
+	tics = 6*2,
+}
+
+SafeFreeslot("S_TAKIS_DRILLEFFECT")
+states[S_TAKIS_DRILLEFFECT] = {
+    sprite = SPR_TNDE,
+    frame = FF_PAPERSPRITE|FF_ANIMATE|FF_FULLBRIGHT,
+	action = function(mo)
+		mo.height = 60*mo.scale
+		mo.radius = 35*mo.scale
+		mo.flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
+		if mo.set == nil
+			mo.anim_duration = 2
+		end
+		if mo.timealive == nil
+			mo.timealive = 1
+		else
+			mo.timealive = $+1
+			
+			mo.frame = ($ &~FF_FRAMEMASK)|((mo.timealive/2) % 5)
+		end
+		
+		if (mo.tracer and mo.tracer.valid)
+			local me = mo.tracer
+			local p = me.player
+			
+			mo.destscale = me.scale
+			
+			P_MoveOrigin(mo,
+				me.x + P_ReturnThrustX(nil,p.drawangle,17*me.scale),
+				me.y + P_ReturnThrustY(nil,p.drawangle,17*me.scale),
+				me.z
+			)
+			
+			mo.angle = p.drawangle
+			mo.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,me.momx,me.momy), me.momz)
+			
+		end
+		
+		if (mo.timealive % 2)
+			mo.flags2 = $|MF2_DONTDRAW
+		else
+			mo.flags2 = $ &~MF2_DONTDRAW
+		end
+		
+	end,
+	/*
+	var1 = 5,
+	var2 = 2,
+	tics = 5*2,
+    */
+	tics = 1,
+	nextstate = S_TAKIS_DRILLEFFECT
+}
+
+/*
+SafeFreeslot("S_TAKIS_BADNIK_RAGDOLL_A")
+states[S_TAKIS_BADNIK_RAGDOLL_A] = {
+    sprite = SPR_RGDA,
+    frame = A|FF_ANIMATE,
+	var1 = 1,
+	var2 = 2,
+	tics = (1*2)*20,
+}
+*/
+
+SafeFreeslot("S_TAKIS_HEARTCARD_SPIN")
+states[S_TAKIS_HEARTCARD_SPIN] = {
+    sprite = SPR_HTCD,
+    frame = A|FF_PAPERSPRITE,
+	tics = TAKIS_MAX_HEARTCARD_FUSE,
+}
+
+--
+
+--mobj freeslot
+
+--i would like to make these last forever like banjo, but
+--server sustainability comes first!
+SafeFreeslot("MT_TAKIS_HEARTCARD")
+mobjinfo[MT_TAKIS_HEARTCARD] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_HEARTCARD_SPIN,
+	spawnhealth = 1000,
+	height = 50*FRACUNIT,
+	radius = 25*FRACUNIT,
+	flags = MF_SLIDEME|MF_SPECIAL
+}
+
+SafeFreeslot("S_TAKIS_HEARTCRATE")
+states[S_TAKIS_HEARTCRATE] = {
+    sprite = SPR_HTCD,
+	action = function(crate)
+		crate.spawnpos = {crate.x,crate.y,crate.z}
+	end,
+    frame = C,
+	tics = -1,
+}
+SafeFreeslot("S_TAKIS_HEARTCRATE_BREAK")
+states[S_TAKIS_HEARTCRATE_BREAK] = {
+    sprite = SPR_HTCD,
+    frame = C,
+	action = function(mo)
+		mo.flags2 = $|MF2_DONTDRAW
+		SpawnEnemyGibs(mo,mo,nil,true)
+		SpawnEnemyGibs(mo,mo,nil,true)
+		--SpawnBam(mo,true)
+		
+		local sfx = P_SpawnGhostMobj(mo)
+		sfx.flags2 = $|MF2_DONTDRAW
+		sfx.fuse = TR
+		S_StartSound(sfx,mo.info.deathsound)
+		
+		if (CV_FindVar("respawnitem").value
+		and (splitscreen or multiplayer))
+			local new = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+			new.camefromcrate = true
+			new.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+			new.angle = mo.angle
+			new.spawnpos = mo.spawnpos
+			P_SetOrigin(new,mo.spawnpos[1],mo.spawnpos[2],mo.spawnpos[3])
+		end
+	end,
+	tics = 0,
+}
+SafeFreeslot("MT_TAKIS_HEARTCRATE")
+mobjinfo[MT_TAKIS_HEARTCRATE] = {
+	--$Name Heart Crate
+	--$Sprite HTCDCRCL
+	--$Category Takis Stuff
+	doomednum = 7003,
+	spawnstate = S_TAKIS_HEARTCRATE,
+	deathstate = S_TAKIS_HEARTCRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_RUNSPAWNFUNC
+}
+
+SafeFreeslot("S_TAKIS_CRATE")
+states[S_TAKIS_CRATE] = {
+    sprite = SPR_HTCD,
+    frame = I,
+	tics = -1,
+}
+SafeFreeslot("S_TAKIS_CRATE_BREAK")
+states[S_TAKIS_CRATE_BREAK] = {
+    sprite = SPR_HTCD,
+    frame = C,
+	action = function(mo)
+		mo.flags2 = $|MF2_DONTDRAW
+		SpawnEnemyGibs(mo,mo,nil,true)
+		if mo.type ~= MT_TAKIS_CRATE
+			SpawnEnemyGibs(mo,mo,nil,true)
+		end
+		/*
+		local bam1,bam2,bam3,bam4 = SpawnBam(mo,true)
+		if mo.type == MT_TAKIS_CRATE
+			local bams = {bam1,bam2,bam3,bam4}
+			for k,bam in ipairs(bams)
+				if not (bam and bam.valid) then continue end
+				bam.scale = $/2
+				bam.destscale = bam.scale*6/5
+			end
+		end
+		*/
+		local sfx = P_SpawnGhostMobj(mo)
+		sfx.flags2 = $|MF2_DONTDRAW
+		sfx.fuse = TR
+		S_StartSound(sfx,mo.info.deathsound)
+		
+	end,
+	tics = 0,
+}
+SafeFreeslot("MT_TAKIS_CRATE")
+mobjinfo[MT_TAKIS_CRATE] = {
+	--$Name Crate
+	--$Sprite HTCDIRIL
+	--$Category Takis Stuff
+	doomednum = 7005,
+	spawnstate = S_TAKIS_CRATE,
+	deathstate = S_TAKIS_CRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 32*FRACUNIT,
+	radius = 16*FRACUNIT,
+	flags = MF_MONITOR|MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY
+}
+
+SafeFreeslot("S_TAKIS_BIGCRATE")
+states[S_TAKIS_BIGCRATE] = {
+    sprite = SPR_HTCD,
+    frame = F,
+	tics = -1,
+}
+SafeFreeslot("MT_TAKIS_BIGCRATE")
+mobjinfo[MT_TAKIS_BIGCRATE] = {
+	--$Name Big Crate
+	--$Sprite HTCDFRFL
+	--$Category Takis Stuff
+	doomednum = 7006,
+	spawnstate = S_TAKIS_BIGCRATE,
+	deathstate = S_TAKIS_CRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY
+}
+
+SafeFreeslot("S_TAKIS_DUMMY")
+states[S_TAKIS_DUMMY] = {
+    sprite = SPR_TMIS,
+	action = function(mo)
+		mo.health = 0 --mo.info.spawnhealth
+		mo.flags = mo.info.flags &~(MF_SHOOTABLE)
+		mo.flashingtics = flashingtics/4
+	end,
+    frame = T,
+	tics = -1,
+}
+SafeFreeslot("MT_TAKIS_DUMMY")
+mobjinfo[MT_TAKIS_DUMMY] = {
+	--$Name Punching Dummy
+	--$Sprite TMIST1
+	--$Category Takis Stuff
+	
+	--$Arg0 Damage trigger tag
+	--$Arg0Default 0
+	--$Arg0Type 0
+	doomednum = 7007,
+	spawnstate = S_TAKIS_DUMMY,
+	deathstate = S_TAKIS_DUMMY,
+	spawnhealth = 1,
+	height = 48*FRACUNIT,
+	radius = 16*FRACUNIT,
+	flags = MF_SHOOTABLE|MF_NOGRAVITY
+}
+
+/*
+SafeFreeslot("MT_TAKIS_DRILLEFFECT")
+mobjinfo[MT_TAKIS_DRILLEFFECT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_DRILLEFFECT,
+	height = 60*FRACUNIT,
+	radius = 35*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
+}
+*/
+
+SafeFreeslot("MT_TAKIS_AFTERIMAGE")
+
+mobjinfo[MT_TAKIS_AFTERIMAGE] = {
+	doomednum = -1,
+	spawnstate = S_PLAY_WAIT,
+	radius = 12*FRACUNIT,
+	height = 10*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP	
+}
+
+local transtonum = {
+	[FF_TRANS90] = 9,
+	[FF_TRANS80] = 8,
+	[FF_TRANS70] = 7,
+	[FF_TRANS60] = 6,
+	[FF_TRANS50] = 5,
+	[FF_TRANS40] = 4,
+	[FF_TRANS30] = 3,
+	[FF_TRANS20] = 2,
+	[FF_TRANS10] = 1,
+	[0] = 0
+}
+local numtotrans = {
+	[9] = FF_TRANS90,
+	[8] = FF_TRANS80,
+	[7] = FF_TRANS70,
+	[6] = FF_TRANS60,
+	[5] = FF_TRANS50,
+	[4] = FF_TRANS40,
+	[3] = FF_TRANS30,
+	[2] = FF_TRANS20,
+	[1] = FF_TRANS10,
+	[0] = 0,
+}
+
+SafeFreeslot("S_SOAPYWINDRINGLOL")
+
+states[S_SOAPYWINDRINGLOL] = {
+	sprite = SPR_TMIS,
+	action = function(ring)
+		--idk why regular fuse cant do this
+		local start = ring.startingtrans
+		local startn = transtonum[ring.startingtrans] or 1
+		ring.renderflags = $|RF_PAPERSPRITE
+		if ring.fuse < 10-startn
+			ring.frame = ((ring.lastframe or ring.frame) &~FF_TRANSMASK)|numtotrans[10-ring.fuse]
+		end
+		ring.lastframe = ring.frame
+	end,
+	tics = 1,
+	frame = TR_TRANS10|FF_PAPERSPRITE|A,
+	nextstate = S_SOAPYWINDRINGLOL,
+}
+
+SafeFreeslot("MT_TAKIS_BADNIK_RAGDOLL")
+mobjinfo[MT_TAKIS_BADNIK_RAGDOLL] = {
+	doomednum = -1,
+	spawnstate = S_PLAY_WAIT,
+	deathstate = S_XPLD1,
+	height = 25*FRACUNIT,
+	radius = 25*FRACUNIT,
+}
+
+SafeFreeslot("MT_TAKIS_SWEAT")
+mobjinfo[MT_TAKIS_SWEAT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SWEAT1,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY,
+	takis_doscale = true,
+	takis_ztype = 1,
+}
+
+SafeFreeslot("MT_TAKIS_TAUNT_JOIN")
+mobjinfo[MT_TAKIS_TAUNT_JOIN] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_TAUNT_JOIN,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+
+}
+
+/*
+SafeFreeslot("MT_TAKIS_TROPHY")
+mobjinfo[MT_TAKIS_TROPHY] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_TROPHY,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+
+}
+*/
+
+SafeFreeslot("MT_SOAP_SUPERTAUNT_FLYINGBOLT")
+mobjinfo[MT_SOAP_SUPERTAUNT_FLYINGBOLT] = {
+	doomednum = -1,
+	spawnstate = S_SOAP_SUPERTAUNT_FLYINGBOLT1,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY,
+	takis_ztype = false,
+}
+
+SafeFreeslot("MT_TAKIS_DEADBODY")
+mobjinfo[MT_TAKIS_DEADBODY] = {
+	doomednum = -1,
+	spawnstate = S_NULL,
+	--mt_playuer
+	flags = MF_NOCLIPHEIGHT|MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
+	height = 48*FRACUNIT,
+	radius = 16*FRACUNIT,
+}
+
+SafeFreeslot("MT_TAKIS_SHOTGUN")
+mobjinfo[MT_TAKIS_SHOTGUN] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SHOTGUN,
+	--mt_playuer
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+}
+
+SafeFreeslot("MT_TAKIS_CLUTCHDUST")
+mobjinfo[MT_TAKIS_CLUTCHDUST] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_CLUTCHDUST,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+}
+
+SafeFreeslot("S_TAKIS_BADNIK_RAGDOLL_A")
+states[S_TAKIS_BADNIK_RAGDOLL_A] = {
+    sprite = SPR_RGDA,
+	frame = A|FF_SEMIBRIGHT,
+	tics = 1,
+	action = function(mo)
+		if not mo.spawned
+			mo.flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY
+			mo.spritexscale,mo.spriteyscale = 2*FU,2*FU
+			mo.timealive = 1
+			--mo.scale = $*2
+			mo.spawned = true
+			mo.fuse = (1*2)*20
+		end
+		local flip = P_MobjFlip(mo)
+		if mo.timealive <= 7
+			mo.z = $ - ((7 - mo.timealive)*FU)*flip
+		else
+			mo.z = $ + ((mo.timealive - 7)*FU)*flip
+			mo.destscale = 0
+		end
+		mo.timealive = $+1
+	end,
+	nextstate = S_TAKIS_BADNIK_RAGDOLL_A
+}
+
+/*
+SafeFreeslot("MT_TAKIS_BADNIK_RAGDOLL_A")
+mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_BADNIK_RAGDOLL_A,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+}
+*/
+
+function A_ShotgunBox(mo)
+	local gun = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_SHOTGUN)
+	gun.dropped = true
+	local oldscale = gun.scale
+	gun.scale = $/20
+	L_ZLaunch(gun,4*FU)
+	gun.destscale = oldscale
+	if mo.forcebox
+		gun.forceon = true
+	end
+	
+	if mo.info.seesound
+		local g = P_SpawnGhostMobj(mo)
+		g.tics = -1
+		g.flags2 = $|MF2_DONTDRAW
+		g.fuse = TR
+		S_StartSound(g,mo.info.seesound)
+	end
+	
+end
+
+SafeFreeslot("S_SHOTGUN_BOX")
+states[S_SHOTGUN_BOX] = {
+	sprite = SPR_TVSG,
+	frame = A,
+	tics = 2,
+	nextstate = S_BOX_FLICKER
+}
+SafeFreeslot("S_SHOTGUN_ICON1")
+SafeFreeslot("S_SHOTGUN_ICON2")
+states[S_SHOTGUN_ICON1] = {
+	sprite = SPR_TVSG,
+	frame = FF_ANIMATE|C,
+	tics = 18,
+	var1 = 3,
+	var2 = 4,
+	nextstate = S_SHOTGUN_ICON2
+}
+states[S_SHOTGUN_ICON2] = {
+	sprite = SPR_TVSG,
+	frame = C,
+	tics = 18,
+	action = A_ShotgunBox,
+	nextstate = S_NULL
+}
+
+SafeFreeslot("MT_SHOTGUN_BOX")
+SafeFreeslot("MT_SHOTGUN_ICON")
+SafeFreeslot("MT_SHOTGUN_GOLDBOX")
+
+function A_GoldMonitorPop(mo)
+	--override shotgun boxesx
+	--these guys use a different action
+	if mo.type == MT_SHOTGUN_GOLDBOX
+		
+		local item = 0
+		if mo.info.damage == MT_UNKNOWN
+			super(mo)
+			return
+		else
+			item = mo.info.damage
+		end
+		
+		if item == 0
+			super(mo)
+			return
+		end
+		
+		if (mo.target and mo.target.player)
+			mo.target.player.numboxes = $-1
+		end
+		mo.fuse = 0
+		
+		local itemmo = P_SpawnMobjFromMobj(mo,0,0,13*FU,item)
+		itemmo.target = mo.target
+		itemmo.forcebox = mo.forcebox
+		
+		S_StartSound(mo,mo.info.deathsound)
+		
+		mo.flags = $ &~(MF_MONITOR|MF_SHOOTABLE)
+		
+		return
+	else
+		super(mo)
+	end
+	
+end
+
+function A_MonitorPop(mo)
+	--override shotgun boxesx
+	if mo.type == MT_SHOTGUN_BOX
+	--or mo.type == MT_SHOTGUN_GOLDBOX
+	--these guys use a different action
+		
+		local item = 0
+		if mo.info.damage == MT_UNKNOWN
+			super(mo)
+			return
+		else
+			item = mo.info.damage
+		end
+		
+		if item == 0
+			super(mo)
+			return
+		end
+		
+		local itemmo = P_SpawnMobjFromMobj(mo,0,0,13*FU,item)
+		itemmo.target = mo.target
+		itemmo.forcebox = mo.forcebox
+		
+		S_StartSound(mo,mo.info.deathsound)
+		P_SpawnMobjFromMobj(mo,0,0,mo.height/4,MT_EXPLODE)
+		
+		mo.health = 0
+		mo.flags = $|MF_NOCLIP &~MF_SOLID
+		
+		return
+	else
+		super(mo)
+	end
+	
+end
+
+mobjinfo[MT_SHOTGUN_BOX] = {
+	--$Name Shotgun Box
+	--$Sprite TVSGA0
+	--$Category Takis Stuff
+	
+	--DEPRECATED
+	--$Flags4Text Force On
+	--$Flags8Text Golden
+	
+	--$Arg0 Parameters
+	--$Arg0Type 12
+	--$Arg0Enum {1="Golden"; 2="Force On";}
+	--$Arg0Flags {1="Golden"; 2="Force On";}
+	
+	--$NotAngled
+	
+	doomednum = 7002,
+	spawnstate = S_SHOTGUN_BOX,
+	painstate = S_SHOTGUN_BOX,
+	deathstate = S_BOX_POP1,
+	deathsound = sfx_pop,
+	reactiontime = 8,
+	speed = 1,
+	damage = MT_SHOTGUN_ICON,
+	mass = 100,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_MONITOR,
+	height = 40*FRACUNIT,
+	radius = 18*FRACUNIT,
+}
+mobjinfo[MT_SHOTGUN_ICON] = {
+	doomednum = -1,
+	spawnstate = S_SHOTGUN_ICON1,
+	seesound = sfx_ncitem,
+	reactiontime = 10,
+	speed = 2*FRACUNIT,
+	damage = 62*FRACUNIT,
+	mass = 100,
+	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOGRAVITY|MF_BOXICON,
+	height = 14*FRACUNIT,
+	radius = 8*FRACUNIT,
+}
+
+SafeFreeslot("S_SHOTGUN_GOLDBOX")
+states[S_SHOTGUN_GOLDBOX] = {
+	sprite = SPR_TVSG,
+	frame = B,
+	tics = 2,
+	nextstate = S_GOLDBOX_FLICKER,
+	action = A_GoldMonitorSparkle,
+}
+mobjinfo[MT_SHOTGUN_GOLDBOX] = {
+	doomednum = -1,
+	spawnstate = S_SHOTGUN_GOLDBOX,
+	painstate = S_SHOTGUN_GOLDBOX,
+	deathstate = S_GOLDBOX_OFF1,
+	attacksound = sfx_monton,
+	deathsound = sfx_pop,
+	reactiontime = 8,
+	speed = 1,
+	damage = MT_SHOTGUN_ICON,
+	mass = 100,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_MONITOR|MF_GRENADEBOUNCE,
+	height = 44*FRACUNIT,
+	radius = 20*FRACUNIT,
+}
+
+/*
+freeslot("MT_TAKIS_SHOTGUN_HITBOX")
+mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SHOTGUN_HITBOX,
+	--mt_playuer
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID,
+	height = 60*FU,
+	radius = 60*FU,
+}
+*/
+SafeFreeslot("S_TAKIS_FLINGSOLID")
+SafeFreeslot("MT_TAKIS_FLINGSOLID")
+states[S_TAKIS_FLINGSOLID] = {
+	sprite = SPR_TVSG,
+	frame = A,
+	tics = 5*TR,
+}
+mobjinfo[MT_TAKIS_FLINGSOLID] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_FLINGSOLID,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING,
+	height = 14*FRACUNIT,
+	radius = 8*FRACUNIT,
+}
+
+SafeFreeslot("S_TAKIS_GIB")
+SafeFreeslot("MT_TAKIS_GIB")
+states[S_TAKIS_GIB] = {
+	sprite = SPR_TGIB,
+	frame = A,
+	tics = -1,
+}
+mobjinfo[MT_TAKIS_GIB] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_GIB,
+	flags = MF_SLIDEME|MF_NOCLIPTHING,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+}
+
+SafeFreeslot("S_TAKIS_FETTI")
+SafeFreeslot("MT_TAKIS_FETTI")
+states[S_TAKIS_FETTI] = {
+	sprite = SPR_TKFT,
+	frame = A|FF_PAPERSPRITE,
+	tics = -1,
+}
+mobjinfo[MT_TAKIS_FETTI] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_FETTI,
+	flags = MF_NOCLIP|MF_NOCLIPTHING,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+	speed = 2*FRACUNIT,
+	mass = FU*60/63,
+}
+
+SafeFreeslot("S_TAKIS_SPIRIT","MT_TAKIS_SPIRIT")
+states[S_TAKIS_SPIRIT] = {
+	sprite = SPR_TSPR,
+	frame = A,
+	tics = -1,
+}
+mobjinfo[MT_TAKIS_SPIRIT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SPIRIT,
+	flags = MF_SLIDEME|MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+}
+
+SafeFreeslot("MT_TAKIS_METALDETECTOR")
+SafeFreeslot("S_TAKIS_METALDETECTOR")
+states[S_TAKIS_METALDETECTOR] = {
+	sprite = SPR_SHGN,
+	frame = C,
+	tics = -1,
+	nextstate = S_TAKIS_METALDETECTOR,
+}
+
+mobjinfo[MT_TAKIS_METALDETECTOR] = {
+	--$Name Metal Detector
+	--$Sprite SHGNC0
+	--$Category Takis Stuff
+	doomednum = 7004,
+	spawnstate = S_TAKIS_METALDETECTOR,
+	deathstate = S_TAKIS_METALDETECTOR,
+	spawnhealth = 1000,
+	activesound = sfx_gbeep,
+	height = 140*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY
+}
+
+SafeFreeslot("MT_TAKIS_STEAM")
+SafeFreeslot("S_TAKIS_STEAM")
+SafeFreeslot("S_TAKIS_STEAM2")
+states[S_TAKIS_STEAM] = {
+	sprite = SPR_MDST,
+	frame = A|FF_ANIMATE,
+	var1 = 3,
+	var2 = 1,
+	tics = 3*1,
+	nextstate = S_TAKIS_STEAM2,
+}
+states[S_TAKIS_STEAM2] = {
+	sprite = SPR_MDST,
+	frame = D|FF_ANIMATE,
+	var1 = 7,
+	var2 = 1,
+	tics = 1*7,
+	nextstate = S_TAKIS_STEAM2
+}
+
+mobjinfo[MT_TAKIS_STEAM] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_STEAM,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+}
+
+SafeFreeslot("MT_TAKIS_PONGLER")
+SafeFreeslot("S_TAKIS_PONGLER")
+states[S_TAKIS_PONGLER] = {
+	sprite = SPR_PGLR,
+	frame = A,
+	var1 = A,
+	tics = TR*3/2,
+}
+mobjinfo[MT_TAKIS_PONGLER] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_PONGLER,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+}
+
+local colorlist = {
+	SKINCOLOR_FLAME,
+	SKINCOLOR_GARNET,
+	SKINCOLOR_KETCHUP
+}
+SafeFreeslot("MT_TAKIS_GUNSHOT")
+SafeFreeslot("S_TAKIS_GUNSHOT")
+states[S_TAKIS_GUNSHOT] = {
+	sprite = SPR_SHGN,
+	frame = D|FF_FULLBRIGHT,
+	action = function(mo)
+		A_ThrownRing(mo)
+		mo.color = colorlist[P_RandomRange(1,#colorlist)]
+		mo.flags2 = $|MF2_RAILRING
+	end,
+	tics = 1,
+	nextstate = S_TAKIS_GUNSHOT
+}
+mobjinfo[MT_TAKIS_GUNSHOT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_GUNSHOT,
+	spawnhealth = 1,
+	height = 32*FRACUNIT,
+	radius = 16*FRACUNIT,
+	speed = 120*FRACUNIT,
+	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_RUNSPAWNFUNC
+}
+
+--SafeFreeslot("MT_TAKIS_EXPLODE")
+SafeFreeslot("S_TAKIS_EXPLODE")
+states[S_TAKIS_EXPLODE] = {
+	sprite = SPR_TKEX,
+	frame = A|FF_ANIMATE|FF_FULLBRIGHT,
+	action = function(mo)
+		if (mo.ticker == nil) then mo.ticker = 0 end
+		
+		if not mo.set
+			mo.radius,mo.height = 6*mo.scale,6*mo.scale
+			mo.flags = MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC|MF_NOBLOCKMAP|MF_NOCLIPHEIGHT
+			mo.anim_duration = 2
+			mo.fuse = 22
+			mo.set = true
+			mo.flags2 = $ &~MF2_DONTDRAW
+			mo.shadowscale = 0
+			mo.mirrored = P_RandomChance(FU/2)
+		else
+			local oldframe = mo.frame &~FF_FRAMEMASK
+			mo.frame = (mo.ticker/2)|oldframe
+		end
+		
+		if mo.oldfx
+			mo.flags = $ &~(MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT)
+			mo.momz = $ + P_GetMobjGravity(mo)*3/2
+			mo.frame = A|($ &~(FF_ANIMATE|FF_FRAMEMASK))
+		end
+		mo.ticker = $+1
+		
+		if leveltime % 3 == 0
+		and mo.thought
+		and mo.oldfx
+			local new = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+			new.flags = MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPTHING|MF_RUNSPAWNFUNC
+			new.state = S_TAKIS_EXPLODE
+			new.momz = 0
+			new.flags2 = $ &~MF2_DONTDRAW
+		else
+		
+		end
+		mo.thought = true
+	end,
+	var1 = 13,
+	var2 = 2,
+	tics = 1,
+	nextstate = S_TAKIS_EXPLODE,
+	/*
+	frame = A|FF_ANIMATE|FF_FULLBRIGHT,
+	var1 = 14,
+	var2 = 2,
+	tics = 2*14,
+	nextstate = S_NULL
+	*/
+}
+
+/*
+mobjinfo[MT_TAKIS_EXPLODE] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_EXPLODE,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT
+}
+*/
+
+SafeFreeslot("MT_TAKIS_WINDLINE")
+SafeFreeslot("S_TAKIS_WINDLINE")
+states[S_TAKIS_WINDLINE] = {
+	sprite = SPR_THND,
+	/*
+	action = function(mo)
+		if mo.lastframe ~= nil
+			mo.frame = mo.lastframe
+		else
+			mo.fuse = 12
+			mo.flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+		end
+		
+		if mo.fuse <= 6
+			mo.spriteyscale = $-FixedDiv(FU,6*FU)
+			mo.spriteyoffset = $+FixedDiv(10*FU,6*FU)
+			
+			mo.spritexscale = $+FixedDiv(FU,6*FU)
+			mo.spritexoffset = $+FixedDiv(FU,6*FU)
+			
+			mo.spritexscale = max($,1)
+			mo.spriteyscale = max($,1)
+			
+			mo.rollangle = $ + FixedAngle(FixedDiv(FU,6*FU)*2)
+		end
+		
+		mo.lastframe = mo.frame
+	end,
+	*/
+	frame = G|FF_PAPERSPRITE|FF_SEMIBRIGHT,
+	tics = 12,
+	--nextstate = S_TAKIS_WINDLINE
+}
+
+/*
+SafeFreeslot("S_TAKIS_SCREAMFACE")
+states[S_TAKIS_SCREAMFACE] = {
+	sprite = SPR_PLAY,
+	action = function(mo)
+		if (mo.timealive == nil)
+			mo.timealive = 1
+		else
+			mo.timealive = $+1
+		end
+		mo.frame = V + (mo.timealive % 2)
+	end,
+	frame = SPR2_AHH_|A,
+	tics = 1,
+	nextstate = S_TAKIS_SCREAMFACE
+}
+*/
+
+mobjinfo[MT_TAKIS_WINDLINE] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_WINDLINE,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+}
+
+SafeFreeslot("MT_TAKIS_SPARK")
+SafeFreeslot("S_TAKIS_SPARK")
+states[S_TAKIS_SPARK] = {
+	sprite = SPR_THND,
+	frame = H|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	tics = -1,
+	var1 = 12,
+	var2 = TR
+}
+mobjinfo[MT_TAKIS_SPARK] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SPARK,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIPTHING|MF_NOBLOCKMAP
+}
+
+local function ImpactAction(mo)
+	mo.fuse = ((6*2)+2)
+	mo.destscale = mo.scale*2
+	mo.dispoffset = 5
+	mo.spriteyoffset = 5*FU
+	mo.renderflags = $|RF_NOCOLORMAPS
+end
+
+--these are an incredible waste of freeslots
+SafeFreeslot("S_TAKIS_IMPACT_1")
+states[S_TAKIS_IMPACT_1] = {
+    sprite = SPR_TKIM,
+    frame = A|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = ImpactAction,
+	var1 = 6,
+	var2 = 2,
+	tics = (6*2)+2,
+}
+
+SafeFreeslot("S_TAKIS_IMPACT_2")
+states[S_TAKIS_IMPACT_2] = {
+    sprite = SPR_TKIM,
+    frame = H|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = ImpactAction,
+	var1 = 6,
+	var2 = 2,
+	tics = (6*2)+2,
+}
+
+SafeFreeslot("S_TAKIS_IMPACT_3")
+states[S_TAKIS_IMPACT_3] = {
+    sprite = SPR_TKIM,
+    frame = O|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = ImpactAction,
+	var1 = 7,
+	var2 = 2,
+	tics = (7*2),
+}
+
+SafeFreeslot("S_TAKIS_IMPACT_4")
+states[S_TAKIS_IMPACT_4] = {
+    sprite = SPR_TKIM,
+    frame = V|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = ImpactAction,
+	var1 = 7,
+	var2 = 2,
+	tics = (7*2),
+}
+
+SafeFreeslot("MT_TAKIS_DRIFTSPARK")
+SafeFreeslot("S_TAKIS_DRIFTSPARK")
+states[S_TAKIS_DRIFTSPARK] = {
+    sprite = SPR_TDRI,
+    frame = A|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = function(mo)
+		mo.blendmode = AST_ADD
+		if mo.loops == nil
+			mo.loops = 0
+		else
+			mo.loops = $+1
+		end
+		if not (mo.tracer and mo.tracer.valid)
+		and mo.loops
+			P_RemoveMobj(mo)
+		end
+	end,
+	var1 = 3,
+	var2 = 2,
+	tics = (4*2),
+	nextstate = S_TAKIS_DRIFTSPARK
+}
+mobjinfo[MT_TAKIS_DRIFTSPARK] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_DRIFTSPARK,
+	spawnhealth = 1,
+	height = 41*FRACUNIT,
+	radius = 18*FRACUNIT,
+	speed = 80*FRACUNIT,
+	flags = MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_RUNSPAWNFUNC,
+	mass = 100,
+}
+
+SafeFreeslot("S_TAKIS_INSTASHEILD")
+states[S_TAKIS_INSTASHEILD] = {
+    sprite = SPR_PITY,
+    frame = A|FF_ANIMATE|FF_FULLBRIGHT,
+	action = function(mo)
+		if mo.loops == nil
+			mo.loops = 1
+		else
+			mo.loops = $+1
+			if mo.loops == 10
+				P_RemoveMobj(mo)
+				return
+			end
+		end
+		mo.frame = $+mo.loops
+		for i = 1,mo.loops
+			mo.frame = $ + FF_TRANS10
+		end
+	end,
+	tics = 1,
+	nextstate = S_TAKIS_INSTASHEILD
+}
+
+SafeFreeslot("S_TAKIS_WATERSPLASH")
+states[S_TAKIS_WATERSPLASH] = {
+    sprite = SPR_TMIS,
+    frame = N|FF_ANIMATE|FF_PAPERSPRITE|FF_ADD,
+	var1 = R - N,
+	var2 = 2,
+	tics = 5*2,
+	nextstate = S_TAKIS_WATERSPLASH
+}
+
+SafeFreeslot("MT_TAKIS_BROLYKI")
+SafeFreeslot("S_TAKIS_BROLYKI")
+states[S_TAKIS_BROLYKI] = {
+    sprite = SPR_TMIS,
+    frame = S|FF_FULLBRIGHT,
+	action = function(mo)
+		mo.dispoffset = -4
+		mo.blendmode = AST_SUBTRACT
+		if mo.target and mo.target.valid
+			mo.color = mo.target.color
+		end
+	end,
+	tics = TR,
+}
+mobjinfo[MT_TAKIS_BROLYKI] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_BROLYKI,
+	dispoffset = -5,
+	spawnhealth = 1000,
+	height = 80*FRACUNIT,
+	radius = 40*FRACUNIT,
+	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPTHING|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_RUNSPAWNFUNC,
+	mass = 100,
+}
+
+--this is cheating lololol
+SPIKE_LIST[MT_TAKIS_HEARTCRATE] = true
+SPIKE_LIST[MT_TAKIS_CRATE] = true
+SPIKE_LIST[MT_TAKIS_BIGCRATE] = true
+
+/*
+SafeFreeslot("MT_TAKIS_SPAWNER")
+SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
+SafeFreeslot("S_TAKIS_SPAWNER_FIRE")
+states[S_TAKIS_SPAWNER_IDLE] = {
+	sprite = SPR_RING,
+	frame = A,
+	tics = 4*TICRATE,
+	nextstate = S_TAKIS_SPAWNER_IDLE,
+}
+
+mobjinfo[MT_TAKIS_SPAWNER] = {
+	--$Name Enemy Spawner
+	--$Sprite SHGNC0
+	--$Category Takis Stuff
+	doomednum = 7005,
+	spawnstate = S_TAKIS_SPAWNER_IDLE,
+	deathstate = S_TAKIS_SPAWNER_IDLE,
+	spawnhealth = 1000,
+	activesound = sfx_gbeep,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SOLID|MF_NOGRAVITY
+}
+*/
+
+SafeFreeslot("SKINCOLOR_SUPERSPARK")
+skincolors[SKINCOLOR_SUPERSPARK] = {
+	name = "Superspark",
+	ramp = {0,130,133,134,149,149,150,150,167,168,168,169,253,254,30,31},
+	invcolor = SKINCOLOR_FLAME,
+    invshade = 7,
+    chatcolor = V_BLUEMAP,
+    accessible = true
+}
+
+addHook("NetVars",function(n)
+	--TAKIS_NET = n($)
+	local netsync = {
+		"nerfarma",
+		"tauntkillsenabled",
+		"noachs",
+		"collaterals",
+		"cards",
+		"hammerquakes",
+		"chaingun",
+		"noeffects",
+		"forcekart",
+		"allowkarters",
+		
+		"achtime",
+		"usedcheats",
+
+		"inspecialstage",
+		"inbossmap",
+		"inbrakmap",
+		"isretro",
+		"numdestroyables",
+		"partdestroy",
+		"maxpostcount",
+		"metalsonics",
+		"ideyadrones",
+		"dronepos",
+		"scoreboard",
+		"allowfallout",
+		"allowbosscards",
+	
+	/*
+		"nerfarma",
+		"tauntkillsenabled",
+		"noachs",
+		"collaterals",
+		"cards",
+		"hammerquakes",
+		"chaingun",
+		"noeffects",
+		"forcekart",
+		"allowkarters",
+		
+		"achtime",
+		"usedcheats",
+		"inspecialstage",
+		"inbossmap",
+		"inbrakmap",
+		"isretro",
+		"numdestroyables",
+		"partdestroy",
+		"maxpostcount",
+		"metalsonics",
+		"ideyadrones",
+		"dronepos",
+		"scoreboard",
+	*/
+	
+	}
+	for _,v in ipairs(netsync)
+		TAKIS_NET[v] = n($)
+	end
+	
+	TAKIS_MAX_HEARTCARDS = n($)
+	SPIKE_LIST = n($)
+	TAKIS_ACHIEVEMENTINFO = n($)
+	
+	--you shouldnt be playing on a tut map in mp but still
+	TAKIS_TUTORIALSTAGE = n($)
+end)
+
+addHook("ThinkFrame",do
+	if TakisKart_DriftColor ~= nil
+		local rainbowcolor = TakisKart_DriftColor(5,(leveltime/3))
+		
+		skincolors[SKINCOLOR_SUPERSPARK].ramp = skincolors[rainbowcolor].ramp
+		skincolors[SKINCOLOR_SUPERSPARK].chatcolor = skincolors[rainbowcolor].chatcolor
+		skincolors[SKINCOLOR_SUPERSPARK].invcolor = skincolors[rainbowcolor].invcolor
+		skincolors[SKINCOLOR_SUPERSPARK].invshade = skincolors[rainbowcolor].invshade
+	end
+	
+	for k,v in ipairs(constlist)
+		local enum = v[1]
+		local val = v[2]
+		
+		if _G[enum] ~= val
+			_G[enum] = val
+			print('\x83TAKIS: \x80"'..enum..'" wrong value')
+		end
+	end
+end)
+
+TAKIS_FILESLOADED = $+1
