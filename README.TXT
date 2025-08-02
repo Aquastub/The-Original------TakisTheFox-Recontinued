@@ -4,4 +4,3 @@ T A K I S  T H E  F O X
 
 Credits:
 luigibudd - The Maker of Takis the Fox
-Aquastub - ...i dunno
