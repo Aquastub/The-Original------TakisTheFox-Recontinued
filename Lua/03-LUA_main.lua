@@ -199,6 +199,7 @@
 	
 	--OTHER SHIT
 	-update tut map for new transfos and fix stuff
+	-make takis work for 2.2.15
 	
 */
 
